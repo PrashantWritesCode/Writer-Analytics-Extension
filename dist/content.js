@@ -123,55 +123,31 @@
     const paragraphs = [];
     try {
       console.log("[WriterAnalytics][content] Extracting paragraph comments...");
-      const paragraphSelectors = [
-        "p[data-p-id]",
-        ".story-content p",
-        ".story-text p",
-        ".part-content p",
-        ".chapter-content p",
-        "div.content p",
-        "main p"
-      ];
-      let foundParagraphs = null;
-      for (const selector of paragraphSelectors) {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length > 0) {
-          foundParagraphs = elements;
-          console.log(`[WriterAnalytics][content] Found ${elements.length} paragraphs using selector: ${selector}`);
-          break;
-        }
-      }
-      if (!foundParagraphs || foundParagraphs.length === 0) {
-        console.warn("[WriterAnalytics][content] No paragraphs found");
-        return [];
-      }
-      foundParagraphs.forEach((p, index) => {
-        const pId = p.getAttribute("data-p-id") || `p-${index}`;
-        const text = p.textContent?.trim() || "";
-        if (text.length < 10)
-          return;
-        const commentSelectors = [
-          ".comment-count",
-          ".para-comment-count",
-          ".comments-number",
-          "[data-comment-count]"
-        ];
-        let count = 0;
-        for (const selector of commentSelectors) {
-          const commentEl = p.querySelector(selector);
-          if (commentEl) {
-            count = parseNumber(commentEl.textContent?.trim() || "0") || 0;
-            break;
+      const pages = document.querySelectorAll(".page.highlighter");
+      console.log("[WriterAnalytics][content] Found pages:", pages.length);
+      pages.forEach((page) => {
+        const paragraphElements = page.querySelectorAll("p[data-p-id]");
+        console.log(`[WriterAnalytics][content] Found ${paragraphElements.length} paragraphs in page`);
+        paragraphElements.forEach((p) => {
+          const pId = p.getAttribute("data-p-id") || `p-${paragraphs.length}`;
+          const text = p.textContent?.trim() || "";
+          if (text.length < 10)
+            return;
+          const commentElement = p.querySelector(".num-comment");
+          let count = 0;
+          if (commentElement) {
+            const countText = commentElement.textContent?.trim() || "0";
+            count = parseNumber(countText) || 0;
+            console.log(`[WriterAnalytics][content] Found comment count ${count} for pId ${pId}`);
+          } else {
+            console.warn(`[WriterAnalytics][content] No comment count found for pId ${pId}, setting to 0`);
           }
-        }
-        if (count === 0) {
-          count = Math.floor(Math.random() * 15);
-        }
-        paragraphs.push({
-          pId,
-          count,
-          raw: text,
-          snippet: text.slice(0, 150) + (text.length > 150 ? "..." : "")
+          paragraphs.push({
+            pId,
+            count,
+            raw: text,
+            snippet: text.slice(0, 150) + (text.length > 150 ? "..." : "")
+          });
         });
       });
       console.log(`[WriterAnalytics][content] Extracted ${paragraphs.length} paragraphs with comments`);

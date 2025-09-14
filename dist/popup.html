@@ -1,80 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">  <!-- This fixes the garbled characters -->
-    <title>Writer Analytics</title>
-    <style>
-        body { font-family: Arial, sans-serif; width: 450px; padding: 15px; margin: 0; }
-        .status { text-align: center; padding: 30px 20px; color: #666; }
-        .content { display: none; }
-        .header { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
-        #title { font-size: 18px; font-weight: bold; margin: 0 0 5px 0; }
-        #author { color: #666; margin: 0; }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
-        .stat-card { text-align: center; padding: 15px 10px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; }
-        .stat-number { font-size: 20px; font-weight: bold; color: #26a69a; margin-bottom: 5px; }
-        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; }
-        .analytics-row { display: flex; gap: 15px; margin: 15px 0; }
-        .analytics-item { flex: 1; text-align: center; padding: 10px; background: #f0f8f7; border-radius: 5px; }
-        .analytics-label { font-size: 11px; color: #666; margin-bottom: 5px; }
-        .analytics-value { font-size: 16px; font-weight: bold; color: #26a69a; }
-        .section-title { font-size: 14px; font-weight: bold; margin: 20px 0 10px 0; color: #333; }
-        .top-list { padding-left: 20px; margin: 10px 0; }
-        .top-list li { margin-bottom: 8px; font-size: 12px; line-height: 1.4; }
-        .paragraphs-container { max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; }
-        .para { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 11px; line-height: 1.3; }
-        .para:last-child { border-bottom: none; }
-        .para:hover { background: #f9f9f9; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Writer Analytics</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-    <div id="status" class="status">🔄 Loading analytics...</div>
-    
-    <div id="content" class="content">
-        <div class="header">
-            <h1 id="title">Story Title</h1>
-            <p id="author">by Author</p>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number" id="reads">—</div>
-                <div class="stat-label">Reads</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="votes">—</div>
-                <div class="stat-label">Votes</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="headerComments">—</div>
-                <div class="stat-label">Comments</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="commentItemsCount">—</div>
-                <div class="stat-label">Paragraphs</div>
-            </div>
-        </div>
-        
-        <div class="analytics-row">
-            <div class="analytics-item">
-                <div class="analytics-label">Engagement Rate</div>
-                <div class="analytics-value" id="engagementRate">—</div>
-            </div>
-            <div class="analytics-item">
-                <div class="analytics-label">Comment Ratio</div>
-                <div class="analytics-value" id="commentRatio">—</div>
-            </div>
-        </div>
-        
-        <div class="section-title">📊 Top 3 Most Commented Paragraphs</div>
-        <ol id="topList" class="top-list"></ol>
-        
-        <div class="section-title">📝 All Paragraphs</div>
-        <div class="paragraphs-container">
-            <div id="paragraphs"></div>
-        </div>
+  <div id="status" class="status">🔄 Loading analytics...</div>
+  
+  <div id="content" class="content">
+    <!-- Header -->
+    <div class="header">
+      <div class="story-info">
+        <h1 id="title" class="story-title">Story Title</h1>
+        <p id="author" class="story-author">by Author</p>
+      </div>
+      <button id="theme-toggle" class="theme-toggle"><span class="theme-icon">🌙</span></button>
     </div>
     
-<script src="dist/popup.js"></script>
+    <!-- Stats Section -->
+    <div class="stats-section">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="reads">—</div>
+          <div class="stat-label">Reads</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="votes">—</div>
+          <div class="stat-label">Votes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="headerComments">—</div>
+          <div class="stat-label">Comments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="commentItemsCount">—</div>
+          <div class="stat-label">Paragraphs</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Analytics Section -->
+    <div class="analytics-section">
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <div class="analytics-label">Engagement Rate</div>
+          <div class="analytics-value" id="engagementRate">—</div>
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-label">Comment Ratio</div>
+          <div class="analytics-value" id="commentRatio">—</div>
+        </div>
+      </div>
+      <div id="analyticsSuggestion" class="analytics-suggestion">Suggestion</div>
+    </div>
+    
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <div class="section-title">📊 Comment Distribution</div>
+      <div class="chart-container">
+        <canvas id="commentsChart"></canvas>
+      </div>
+    </div>
+    
+    <!-- Your Hits Section -->
+    <div class="top-hits-section">
+      <div class="section-title">📊 Your Hits</div>
+      <ul id="topHitsList" class="top-hits-list"></ul>
+    </div>
+    
+    <!-- Paragraphs Section -->
+    <div class="paragraphs-section">
+      <div class="section-title">📝 All Paragraphs</div>
+      <div class="paragraphs-list" id="paragraphsList"></div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button id="export-btn">Export 📤</button>
+      <button id="refresh-btn">Refresh 🔄</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
 </body>
 </html>

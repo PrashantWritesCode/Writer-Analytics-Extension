@@ -31,6 +31,12 @@ function formatNumber(num) {
     return (num / 1e3).toFixed(1) + "K";
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+function firstN(text, n = 120) {
+  if (!text)
+    return "";
+  const s = text.trim().replace(/\s+/g, " ");
+  return s.length <= n ? s : s.slice(0, n).trim() + "\u2026";
+}
 function displayData(stats) {
   console.log("DISPLAYING DATA:", stats);
   showContent();
@@ -60,38 +66,95 @@ function displayData(stats) {
     engagementEl.textContent = engagementRate;
   if (commentRatioEl)
     commentRatioEl.textContent = commentRatio;
-  const topList = $("topList");
-  if (topList && stats.paragraphComments) {
-    topList.innerHTML = "";
+  const topHitsList = $("topHitsList");
+  if (topHitsList && stats.paragraphComments) {
+    topHitsList.innerHTML = "";
     const top = [...stats.paragraphComments].sort((a, b) => (b.count ?? 0) - (a.count ?? 0)).slice(0, 3);
-    top.forEach((p) => {
+    top.forEach((p, index) => {
       const li = document.createElement("li");
       const count = p.count ?? 0;
-      const snippet = (p.snippet || p.raw || "").substring(0, 80) + "...";
-      li.innerHTML = `<strong>${count} comments:</strong> "${snippet}"`;
-      topList.appendChild(li);
+      const snippet = firstN(p.snippet || p.raw);
+      li.setAttribute("data-rank", `#${index + 1}`);
+      li.innerHTML = `<strong>${count} comment${count === 1 ? "" : "s"}:</strong> "${snippet}"`;
+      if (index === 0)
+        li.classList.add("top-hit");
+      else if (count < 5)
+        li.classList.add("revise");
+      if (topHitsList)
+        topHitsList.appendChild(li);
     });
   }
   const canvas = $("commentsChart");
-  if (canvas instanceof HTMLCanvasElement && stats.paragraphComments) {
+  if (canvas instanceof HTMLCanvasElement && stats.paragraphComments && canvas) {
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#26a69a";
-      ctx.font = "16px Arial";
-      ctx.fillText("\u{1F4CA} Comment Distribution", 20, 30);
-      const maxCount = Math.max(...stats.paragraphComments.map((p) => p.count || 0));
+      const isDark = document.body.classList.contains("dark-theme");
+      const textColor = isDark ? "#e2e8f0" : "#4a5568";
+      const gridColor = isDark ? "#4a5568" : "#e2e8f0";
+      const accentColor = isDark ? "#26a69a" : "#26a69a";
+      ctx.fillStyle = accentColor;
+      ctx.font = "14px Arial";
+      ctx.fillText("Comment Distribution", 10, 20);
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(30, 20);
+      ctx.lineTo(30, canvas.height - 30);
+      ctx.lineTo(canvas.width - 10, canvas.height - 30);
+      ctx.stroke();
+      const maxCount = Math.max(...stats.paragraphComments.map((p) => p.count ?? 0));
+      for (let i = 0; i <= 5; i++) {
+        const y = canvas.height - 30 - i / 5 * (canvas.height - 60);
+        ctx.beginPath();
+        ctx.moveTo(30, y);
+        ctx.lineTo(canvas.width - 10, y);
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        ctx.fillStyle = textColor;
+        ctx.fillText((maxCount * i / 5).toFixed(0), 5, y);
+      }
+      for (let i = 0; i < 15; i++) {
+        const x = 30 + i * 25;
+        ctx.fillText(`P${i + 1}`, x, canvas.height - 15);
+      }
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "rgba(38, 166, 154, 0.8)");
+      gradient.addColorStop(1, "rgba(38, 166, 154, 0.3)");
       stats.paragraphComments.slice(0, 15).forEach((p, i) => {
-        const height = Math.max((p.count || 0) / maxCount * 80, 2);
-        const x = 25 + i * 25;
-        const y = 120 - height;
-        ctx.fillStyle = "#26a69a";
+        const height = maxCount > 0 ? (p.count ?? 0) / maxCount * 120 : 0;
+        const x = 30 + i * 25;
+        const y = canvas.height - 30 - height;
+        ctx.fillStyle = gradient;
         ctx.fillRect(x, y, 20, height);
-        ctx.fillStyle = "#666";
+        ctx.fillStyle = textColor;
         ctx.font = "10px Arial";
-        ctx.fillText(`P${i + 1}`, x, 135);
       });
     }
+  }
+  const paragraphsList = $("paragraphsList");
+  if (paragraphsList && stats.paragraphComments) {
+    paragraphsList.innerHTML = "";
+    stats.paragraphComments.forEach((p) => {
+      const div = document.createElement("div");
+      div.classList.add("para");
+      const count = p.count ?? 0;
+      const snippet = firstN(p.snippet || p.raw);
+      div.innerHTML = `<strong>P${stats.paragraphComments.indexOf(p) + 1}:</strong> ${count} comment${count === 1 ? "" : "s"} - "${snippet}"`;
+      if (count > 5)
+        div.classList.add("highlight");
+      else if (count < 2)
+        div.classList.add("boost");
+      if (paragraphsList)
+        paragraphsList.appendChild(div);
+    });
+  }
+  const suggestionEl = $("analyticsSuggestion");
+  if (suggestionEl && stats.paragraphComments) {
+    const minCountIndex = stats.paragraphComments.reduce((minIndex, p, i, arr) => (p.count ?? 0) < (arr[minIndex].count ?? 0) ? i : minIndex, 0);
+    if (suggestionEl)
+      suggestionEl.textContent = minCountIndex >= 0 ? `_P${minCountIndex + 1} needs a twist!_` : "Keep writing!";
   }
   console.log("DATA DISPLAY COMPLETE!");
 }
@@ -129,10 +192,16 @@ function initTheme() {
   const themeToggle = $("theme-toggle");
   if (themeToggle) {
     themeToggle.addEventListener("click", function() {
-      document.body.classList.toggle("dark-theme");
+      const isDark = document.body.classList.toggle("dark-theme");
       const icon = themeToggle.querySelector(".theme-icon");
       if (icon) {
-        icon.textContent = document.body.classList.contains("dark-theme") ? "\u2600\uFE0F" : "\u{1F319}";
+        icon.textContent = isDark ? "\u2600\uFE0F" : "\u{1F319}";
+      }
+      const canvas = $("commentsChart");
+      if (canvas instanceof HTMLCanvasElement) {
+        const ctx = canvas.getContext("2d");
+        if (ctx)
+          displayData({ paragraphComments: [] });
       }
     });
   }
