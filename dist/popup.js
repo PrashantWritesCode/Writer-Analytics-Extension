@@ -158,31 +158,82 @@ function displayData(stats) {
   }
   console.log("DATA DISPLAY COMPLETE!");
 }
-function loadData() {
-  console.log("LOADING DATA FROM STORAGE...");
+function loadData(forceRefresh = false) {
+  console.log("LOADING DATA FROM STORAGE...", { forceRefresh });
   showStatus("\u{1F504} Loading analytics...");
   try {
-    chrome.storage.local.get(["writerAnalyticsStats"], function(result) {
-      console.log("STORAGE RESULT:", result);
-      if (chrome.runtime.lastError) {
-        console.error("STORAGE ERROR:", chrome.runtime.lastError);
-        showStatus("\u274C Storage Error");
-        return;
-      }
-      const stats = result.writerAnalyticsStats;
-      if (!stats) {
-        showStatus(`
-          <div style="text-align: center; padding: 20px;">
-            <div style="font-size: 32px;">\u{1F4DD}</div>
-            <div><strong>No Data Found</strong></div>
-            <div style="font-size: 12px; color: #666;">Visit a Wattpad story page first!</div>
-          </div>
-        `);
-        return;
-      }
-      console.log("CALLING DISPLAY DATA...");
-      displayData(stats);
-    });
+    if (forceRefresh) {
+      console.log("[WriterAnalytics][popup] Forcing refresh, requesting new data from content script...");
+      chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("[WriterAnalytics][popup] Error requesting refresh:", chrome.runtime.lastError);
+          if (chrome.runtime.lastError.message) {
+            console.error("Detailed Error:", chrome.runtime.lastError.message);
+          }
+          showStatus("\u274C Refresh Error: Check console for details");
+          return;
+        }
+        if (response && response.payload) {
+          console.log("[WriterAnalytics][popup] Received refreshed data:", response.payload);
+          displayData(response.payload);
+        } else {
+          chrome.storage.local.get(null, (result) => {
+            const storyKeys = Object.keys(result).filter((key) => key.startsWith("writerAnalyticsStats-"));
+            if (storyKeys.length > 0) {
+              const latestKey = storyKeys[storyKeys.length - 1];
+              const stats = result[latestKey];
+              if (stats) {
+                displayData(stats);
+              } else {
+                showStatus(`
+                  <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 32px;">\u{1F4DD}</div>
+                    <div><strong>No Data Found</strong></div>
+                    <div style="font-size: 12px; color: #666;">Check storage or reload page!</div>
+                  </div>
+                `);
+              }
+            } else {
+              showStatus(`
+                <div style="text-align: center; padding: 20px;">
+                  <div style="font-size: 32px;">\u{1F4DD}</div>
+                  <div><strong>No Data Found</strong></div>
+                  <div style="font-size: 12px; color: #666;">Visit a Wattpad story page first!</div>
+                </div>
+              `);
+            }
+          });
+        }
+      });
+    } else {
+      chrome.storage.local.get(null, (result) => {
+        console.log("ALL STORAGE DATA:", result);
+        const storyKeys = Object.keys(result).filter((key) => key.startsWith("writerAnalyticsStats-"));
+        if (storyKeys.length > 0) {
+          const latestKey = storyKeys[storyKeys.length - 1];
+          const stats = result[latestKey];
+          if (stats) {
+            displayData(stats);
+          } else {
+            showStatus(`
+              <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 32px;">\u{1F4DD}</div>
+                <div><strong>No Data Found</strong></div>
+                <div style="font-size: 12px; color: #666;">Check storage or reload page!</div>
+              </div>
+            `);
+          }
+        } else {
+          showStatus(`
+            <div style="text-align: center; padding: 20px;">
+              <div style="font-size: 32px;">\u{1F4DD}</div>
+              <div><strong>No Data Found</strong></div>
+              <div style="font-size: 12px; color: #666;">Visit a Wattpad story page first!</div>
+            </div>
+          `);
+        }
+      });
+    }
   } catch (error) {
     console.error("CRITICAL ERROR:", error);
     showStatus("\u274C Critical Error: " + error.message);
@@ -210,6 +261,15 @@ console.log("POPUP SCRIPT STARTING...");
 document.addEventListener("DOMContentLoaded", function() {
   console.log("DOM LOADED!");
   initTheme();
+  const refreshBtn = $("refresh-btn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      console.log("[WriterAnalytics][popup] Refresh button clicked");
+      loadData(true);
+    });
+  } else {
+    console.warn("[WriterAnalytics][popup] Refresh button not found, check HTML id");
+  }
   setTimeout(loadData, 100);
 });
 setTimeout(function() {

@@ -67,7 +67,6 @@ console.log("[WriterAnalytics][background] service worker starting");
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log("[WriterAnalytics][background] onInstalled", details.reason);
   
-  // Inject content script into existing Wattpad tabs
   try {
     const tabs = await chrome.tabs.query({ url: "*://www.wattpad.com/*" });
     for (const tab of tabs) {
@@ -92,7 +91,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("[WriterAnalytics][background] Received message:", message.type);
   
   if (message.type === "WA_STATS") {
-    // Handle incoming stats from content script
     (async () => {
       try {
         const stats = message.payload as StoryStats;
@@ -100,52 +98,100 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         await saveCachedStats(stats);
         
-        // Try to forward to popup if it's open (ignore if fails)
-        try {
-          await chrome.runtime.sendMessage({
-            type: "WA_STATS",
+        // Notify popup if open
+        if (chrome.extension.getViews({ type: "popup" }).length > 0) {
+          chrome.runtime.sendMessage({
+            type: "WA_UPDATE",
             payload: stats
           });
-        } catch (err) {
-          // Popup might not be open, that's ok
+        } else {
           console.log("[WriterAnalytics][background] Popup not open, stats cached");
         }
         
         sendResponse({ success: true });
-      } catch (err:any) {
+      } catch (err: any) {
         console.error("[WriterAnalytics][background] Error handling WA_STATS:", err);
         sendResponse({ success: false, error: err.message });
       }
     })();
-    
-    return true; // Keep message channel open for async response
+    return true;
   }
   
   if (message.type === "GET_WA_STATS") {
-    // Handle popup request for cached stats
-    console.log("[WriterAnalytics][background] GET_WA_STATS request received");
-    
     (async () => {
       try {
         const stats = await loadCachedStats();
         console.log("[WriterAnalytics][background] Sending cached stats:", !!stats);
-        sendResponse({ 
-          success: true, 
-          stats: stats 
-        });
-      } catch (err:any) {
+        sendResponse({ success: true, stats: stats });
+      } catch (err: any) {
         console.error("[WriterAnalytics][background] Error loading cached stats:", err);
-        sendResponse({ 
-          success: false, 
-          error: err.message 
-        });
+        sendResponse({ success: false, error: err.message });
       }
     })();
-    
-    return true; // Keep message channel open for async response
+    return true;
+  }
+  
+  if (message.type === "WA_REFRESH") {
+    (async () => {
+      try {
+        // Request content script to refresh
+        chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
+          if (response && response.payload) {
+            console.log("[WriterAnalytics][background] Received refreshed stats:", response.payload);
+            saveCachedStats(response.payload).then(() => {
+              sendResponse({ success: true, payload: response.payload });
+            });
+          } else {
+            loadCachedStats().then((stats) => {
+              sendResponse({ success: true, payload: stats });
+            });
+          }
+        });
+      } catch (err: any) {
+        console.error("[WriterAnalytics][background] Error handling WA_REFRESH:", err);
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+  
+  if (message.type === "WA_URL_CHANGE") {
+    (async () => {
+      try {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0] && tabs[0].id) {
+            chrome.scripting.executeScript({
+              target: { tabId: tabs[0].id },
+              func: () => {
+                return window.extractStoryStats ? window.extractStoryStats() : null;
+              },
+            }, async (injectionResults) => {
+              if (injectionResults && injectionResults[0] && injectionResults[0].result) {
+                const stats = injectionResults[0].result as StoryStats;
+                await saveCachedStats(stats);
+                chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats });
+                sendResponse({ success: true });
+              } else {
+                sendResponse({ success: false });
+              }
+            });
+          }
+        });
+      } catch (err: any) {
+        console.error("[WriterAnalytics][background] Error handling WA_URL_CHANGE:", err);
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
   }
   
   return false;
 });
+
+// Remove placeholder function
+// function extractStoryStats() {
+//   // This should be implemented in content.ts
+//   return null;
+// }
 
 console.log("[WriterAnalytics][background] background script loaded");

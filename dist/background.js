@@ -60,12 +60,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const stats = message.payload;
         console.log("[WriterAnalytics][background] caching WA_STATS", stats.title);
         await saveCachedStats(stats);
-        try {
-          await chrome.runtime.sendMessage({
-            type: "WA_STATS",
+        if (chrome.extension.getViews({ type: "popup" }).length > 0) {
+          chrome.runtime.sendMessage({
+            type: "WA_UPDATE",
             payload: stats
           });
-        } catch (err) {
+        } else {
           console.log("[WriterAnalytics][background] Popup not open, stats cached");
         }
         sendResponse({ success: true });
@@ -77,21 +77,65 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === "GET_WA_STATS") {
-    console.log("[WriterAnalytics][background] GET_WA_STATS request received");
     (async () => {
       try {
         const stats = await loadCachedStats();
         console.log("[WriterAnalytics][background] Sending cached stats:", !!stats);
-        sendResponse({
-          success: true,
-          stats
-        });
+        sendResponse({ success: true, stats });
       } catch (err) {
         console.error("[WriterAnalytics][background] Error loading cached stats:", err);
-        sendResponse({
-          success: false,
-          error: err.message
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+  if (message.type === "WA_REFRESH") {
+    (async () => {
+      try {
+        chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
+          if (response && response.payload) {
+            console.log("[WriterAnalytics][background] Received refreshed stats:", response.payload);
+            saveCachedStats(response.payload).then(() => {
+              sendResponse({ success: true, payload: response.payload });
+            });
+          } else {
+            loadCachedStats().then((stats) => {
+              sendResponse({ success: true, payload: stats });
+            });
+          }
         });
+      } catch (err) {
+        console.error("[WriterAnalytics][background] Error handling WA_REFRESH:", err);
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+  if (message.type === "WA_URL_CHANGE") {
+    (async () => {
+      try {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0] && tabs[0].id) {
+            chrome.scripting.executeScript({
+              target: { tabId: tabs[0].id },
+              func: () => {
+                return window.extractStoryStats ? window.extractStoryStats() : null;
+              }
+            }, async (injectionResults) => {
+              if (injectionResults && injectionResults[0] && injectionResults[0].result) {
+                const stats = injectionResults[0].result;
+                await saveCachedStats(stats);
+                chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats });
+                sendResponse({ success: true });
+              } else {
+                sendResponse({ success: false });
+              }
+            });
+          }
+        });
+      } catch (err) {
+        console.error("[WriterAnalytics][background] Error handling WA_URL_CHANGE:", err);
+        sendResponse({ success: false, error: err.message });
       }
     })();
     return true;

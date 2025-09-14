@@ -1,4 +1,22 @@
-// Type definitions (assuming these are defined elsewhere)
+// Type definitions
+type ParagraphComment = {
+  pId: string;
+  count: number | null;
+  raw?: string;
+  snippet?: string;
+};
+
+type StoryStats = {
+  title?: string | null;
+  author?: string | null;
+  reads?: number | null;
+  votes?: number | null;
+  headerComments?: number | null;
+  commentItemsCount?: number;
+  paragraphComments?: ParagraphComment[];
+  capturedAt?: string;
+  wordCount?: number;
+};
 
 function extractStoryStats(): StoryStats | null {
   try {
@@ -120,6 +138,12 @@ function extractStoryStats(): StoryStats | null {
       return null;
     }
 
+    // Save with story-specific key
+    const storyId = window.location.pathname.split('/').pop() || 'unknown-story';
+    chrome.storage.local.set({ [`writerAnalyticsStats-${storyId}`]: stats }, () => {
+      console.log(`[WriterAnalytics][content] Saved stats for story ${storyId}`);
+    });
+
     return stats;
   } catch (err) {
     console.error("[WriterAnalytics][content] Error extracting stats:", err);
@@ -213,7 +237,6 @@ function sendStatsToBackground(stats: StoryStats) {
 
 function waitForPageContent(): Promise<void> {
   return new Promise((resolve) => {
-    // Wait for content to load
     const checkContent = () => {
       const hasContent = document.querySelector('h1') || document.querySelector('.story-title') || document.querySelector('p');
       if (hasContent) {
@@ -224,7 +247,6 @@ function waitForPageContent(): Promise<void> {
         setTimeout(checkContent, 500);
       }
     };
-    
     checkContent();
   });
 }
@@ -233,27 +255,21 @@ function waitForPageContent(): Promise<void> {
 async function init() {
   console.log("[WriterAnalytics][content] Content script loaded on:", window.location.href);
   
-  // Check if this is a Wattpad story page
   if (!window.location.href.includes('wattpad.com') || !window.location.pathname.includes('/')) {
     console.log("[WriterAnalytics][content] Not a Wattpad story page, skipping");
     return;
   }
   
   try {
-    // Wait for page content to load
     await waitForPageContent();
-    
-    // Wait a bit more for dynamic content
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Extract and send stats
     const stats = extractStoryStats();
     if (stats) {
       sendStatsToBackground(stats);
     } else {
       console.log("[WriterAnalytics][content] No stats extracted from this page");
       
-      // Send sample data for testing if no real data found
       const sampleStats: StoryStats = {
         title: "Sample Story Title (No Real Data Found)",
         author: "Sample Author",
@@ -277,10 +293,46 @@ async function init() {
   }
 }
 
-// Run initialization based on page state
+// Run initialization based on page state and monitor URL changes
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
 } else {
-  // Page already loaded
   setTimeout(init, 1000);
 }
+
+// Detect URL changes and re-run extraction
+let lastUrl = window.location.href;
+setInterval(() => {
+  if (window.location.href !== lastUrl) {
+    lastUrl = window.location.href;
+    console.log("[WriterAnalytics][content] URL changed to:", lastUrl);
+    init(); // Re-run initialization on URL change
+  }
+}, 1000);
+
+// Add message listeners
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "WA_REFRESH") {
+    console.log("[WriterAnalytics][content] Received WA_REFRESH, re-extracting stats...");
+    const stats = extractStoryStats();
+    if (stats) {
+      sendStatsToBackground(stats);
+      sendResponse({ payload: stats });
+    } else {
+      sendResponse({ payload: null });
+    }
+    return true; // Async response
+  }
+
+  if (message.type === "WA_URL_CHANGE") {
+    console.log("[WriterAnalytics][content] Received WA_URL_CHANGE, re-extracting stats...");
+    const stats = extractStoryStats();
+    if (stats) {
+      sendStatsToBackground(stats);
+      sendResponse({ success: true, payload: stats });
+    } else {
+      sendResponse({ success: false });
+    }
+    return true; // Async response
+  }
+});

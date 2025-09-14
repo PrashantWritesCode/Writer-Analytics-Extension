@@ -98,6 +98,10 @@
         console.warn("[WriterAnalytics][content] No data extracted, returning null");
         return null;
       }
+      const storyId = window.location.pathname.split("/").pop() || "unknown-story";
+      chrome.storage.local.set({ [`writerAnalyticsStats-${storyId}`]: stats }, () => {
+        console.log(`[WriterAnalytics][content] Saved stats for story ${storyId}`);
+      });
       return stats;
     } catch (err) {
       console.error("[WriterAnalytics][content] Error extracting stats:", err);
@@ -228,5 +232,37 @@
   } else {
     setTimeout(init, 1e3);
   }
+  var lastUrl = window.location.href;
+  setInterval(() => {
+    if (window.location.href !== lastUrl) {
+      lastUrl = window.location.href;
+      console.log("[WriterAnalytics][content] URL changed to:", lastUrl);
+      init();
+    }
+  }, 1e3);
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "WA_REFRESH") {
+      console.log("[WriterAnalytics][content] Received WA_REFRESH, re-extracting stats...");
+      const stats = extractStoryStats();
+      if (stats) {
+        sendStatsToBackground(stats);
+        sendResponse({ payload: stats });
+      } else {
+        sendResponse({ payload: null });
+      }
+      return true;
+    }
+    if (message.type === "WA_URL_CHANGE") {
+      console.log("[WriterAnalytics][content] Received WA_URL_CHANGE, re-extracting stats...");
+      const stats = extractStoryStats();
+      if (stats) {
+        sendStatsToBackground(stats);
+        sendResponse({ success: true, payload: stats });
+      } else {
+        sendResponse({ success: false });
+      }
+      return true;
+    }
+  });
 })();
 //# sourceMappingURL=content.js.map
