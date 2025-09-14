@@ -74,62 +74,19 @@ function displayData(stats: any) {
       const li = document.createElement("li");
       const count = p.count ?? 0;
       const snippet = firstN(p.snippet || p.raw);
-      li.setAttribute("data-rank", `#${index + 1}`);
-      li.innerHTML = `<strong>${count} comment${count === 1 ? "" : "s"}:</strong> "${snippet}"`;
+      li.innerHTML = `
+        <div class="hit-item">
+          <span class="hit-rank" data-rank="#${index + 1}">P${stats.paragraphComments.indexOf(p) + 1}</span>
+          <div class="hit-content">
+            <span class="content-label">Content:</span> <span class="content-text">${snippet}</span>
+            <span class="comment-label">Comments:</span> <strong class="comment-count">${count} comment${count === 1 ? "" : "s"}</strong>
+          </div>
+        </div>
+      `;
       if (index === 0) li.classList.add("top-hit");
       else if (count < 5) li.classList.add("revise");
       if (topHitsList) topHitsList.appendChild(li);
     });
-  }
-
-  const canvas = $("commentsChart");
-  if (canvas instanceof HTMLCanvasElement && stats.paragraphComments && canvas) {
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const isDark = document.body.classList.contains("dark-theme");
-      const textColor = isDark ? "#e2e8f0" : "#4a5568";
-      const gridColor = isDark ? "#4a5568" : "#e2e8f0";
-      const accentColor = isDark ? "#26a69a" : "#26a69a";
-      ctx.fillStyle = accentColor;
-      ctx.font = "14px Arial";
-      ctx.fillText("Comment Distribution", 10, 20);
-      ctx.strokeStyle = gridColor;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(30, 20);
-      ctx.lineTo(30, canvas.height - 30);
-      ctx.lineTo(canvas.width - 10, canvas.height - 30);
-      ctx.stroke();
-      const maxCount = Math.max(...stats.paragraphComments.map((p: any) => p.count ?? 0));
-      for (let i = 0; i <= 5; i++) {
-        const y = canvas.height - 30 - (i / 5) * (canvas.height - 60);
-        ctx.beginPath();
-        ctx.moveTo(30, y);
-        ctx.lineTo(canvas.width - 10, y);
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-        ctx.fillStyle = textColor;
-        ctx.fillText((maxCount * i / 5).toFixed(0), 5, y);
-      }
-      for (let i = 0; i < 15; i++) {
-        const x = 30 + i * 25;
-        ctx.fillText(`P${i + 1}`, x, canvas.height - 15);
-      }
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, "rgba(38, 166, 154, 0.8)");
-      gradient.addColorStop(1, "rgba(38, 166, 154, 0.3)");
-      stats.paragraphComments.slice(0, 15).forEach((p: any, i: number) => {
-        const height = maxCount > 0 ? (p.count ?? 0) / maxCount * 120 : 0;
-        const x = 30 + i * 25;
-        const y = canvas.height - 30 - height;
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, 20, height);
-        ctx.fillStyle = textColor;
-        ctx.font = "10px Arial";
-      });
-    }
   }
 
   const paragraphsList = $("paragraphsList");
@@ -140,7 +97,13 @@ function displayData(stats: any) {
       div.classList.add("para");
       const count = p.count ?? 0;
       const snippet = firstN(p.snippet || p.raw);
-      div.innerHTML = `<strong>P${stats.paragraphComments.indexOf(p) + 1}:</strong> ${count} comment${count === 1 ? "" : "s"} - "${snippet}"`;
+      div.innerHTML = `
+        <span class="para-number">P${stats.paragraphComments.indexOf(p) + 1}</span>
+        <div class="para-content">
+          <span class="content-label">Content:</span> <span class="content-text">${snippet}</span>
+          <span class="comment-label">Comments:</span> <span class="comment-count">${count} comment${count === 1 ? "" : "s"}</span>
+        </div>
+      `;
       if (count > 5) div.classList.add("highlight");
       else if (count < 2) div.classList.add("boost");
       if (paragraphsList) paragraphsList.appendChild(div);
@@ -163,7 +126,7 @@ function loadData(forceRefresh = false) {
   
   try {
     if (forceRefresh) {
-      console.log("[WriterAnalytics][popup] Forcing refresh, requesting new data from content script...");
+      console.log("[WriterAnalytics][popup] Forcing refresh, requesting new data from background...");
       chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
         if (chrome.runtime.lastError) {
           console.error("[WriterAnalytics][popup] Error requesting refresh:", chrome.runtime.lastError);
@@ -250,11 +213,6 @@ function initTheme() {
       if (icon) {
         icon.textContent = isDark ? "☀️" : "🌙";
       }
-      const canvas = $("commentsChart");
-      if (canvas instanceof HTMLCanvasElement) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) displayData({ paragraphComments: [] });
-      }
     });
   }
 }
@@ -287,3 +245,23 @@ setTimeout(function() {
     loadData();
   }
 }, 2000);
+
+// Add CSS for better styling
+const style = document.createElement("style");
+style.textContent = `
+  .top-hit { color: #26a69a; font-weight: bold; }
+  .revise { color: #666; font-style: italic; }
+  .highlight { background-color: #e0f7fa; padding: 5px; border-radius: 3px; }
+  .boost { color: #757575; }
+  .hit-item { display: flex; align-items: center; margin-bottom: 10px; }
+  .hit-rank { font-weight: bold; margin-right: 10px; }
+  .hit-content { flex-grow: 1; }
+  .content-label { font-weight: bold; color: #26a69a; }
+  .comment-label { font-weight: bold; color: #ab47bc; }
+  .content-text { margin-right: 10px; }
+  .comment-count { color: #ab47bc; }
+  .para { margin-bottom: 5px; }
+  .para-number { font-weight: bold; margin-right: 10px; }
+  .para-content { display: inline-block; }
+`;
+document.head.appendChild(style);

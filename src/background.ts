@@ -1,21 +1,3 @@
-type ParagraphComment = {
-  pId: string;
-  count: number | null;
-  raw?: string;
-  snippet?: string;
-};
-
-type StoryStats = {
-  title?: string | null;
-  author?: string | null;
-  reads?: number | null;
-  votes?: number | null;
-  headerComments?: number | null;
-  commentItemsCount?: number;
-  paragraphComments?: ParagraphComment[];
-  capturedAt?: string;
-  wordCount?: number;
-};
 
 const CACHE_KEY = "writerAnalyticsStats";
 
@@ -98,15 +80,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         await saveCachedStats(stats);
         
-        // Notify popup if open
-        if (chrome.extension.getViews({ type: "popup" }).length > 0) {
-          chrome.runtime.sendMessage({
-            type: "WA_UPDATE",
-            payload: stats
-          });
-        } else {
-          console.log("[WriterAnalytics][background] Popup not open, stats cached");
-        }
+        // Instead of getViews, send update to popup if needed via message
+        chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[WriterAnalytics][background] No popup to update:", chrome.runtime.lastError.message);
+          }
+        });
         
         sendResponse({ success: true });
       } catch (err: any) {
@@ -187,11 +166,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   return false;
 });
-
-// Remove placeholder function
-// function extractStoryStats() {
-//   // This should be implemented in content.ts
-//   return null;
-// }
-
-console.log("[WriterAnalytics][background] background script loaded");

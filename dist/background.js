@@ -60,14 +60,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const stats = message.payload;
         console.log("[WriterAnalytics][background] caching WA_STATS", stats.title);
         await saveCachedStats(stats);
-        if (chrome.extension.getViews({ type: "popup" }).length > 0) {
-          chrome.runtime.sendMessage({
-            type: "WA_UPDATE",
-            payload: stats
-          });
-        } else {
-          console.log("[WriterAnalytics][background] Popup not open, stats cached");
-        }
+        chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[WriterAnalytics][background] No popup to update:", chrome.runtime.lastError.message);
+          }
+        });
         sendResponse({ success: true });
       } catch (err) {
         console.error("[WriterAnalytics][background] Error handling WA_STATS:", err);
@@ -142,5 +139,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   return false;
 });
-console.log("[WriterAnalytics][background] background script loaded");
 //# sourceMappingURL=background.js.map
