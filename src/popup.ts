@@ -1,24 +1,6 @@
+
 function $<T extends HTMLElement = HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
-}
-
-function showStatus(text: string) {
-  console.log("SHOWING STATUS:", text);
-  const status = $("status");
-  const content = $("content");
-  if (status) {
-    status.style.display = "block";
-    status.innerHTML = text;
-  }
-  if (content) content.style.display = "none";
-}
-
-function showContent() {
-  console.log("SHOWING CONTENT");
-  const status = $("status");
-  const content = $("content");
-  if (status) status.style.display = "none";
-  if (content) content.style.display = "block";
 }
 
 function formatNumber(num: number | null | undefined): string {
@@ -34,9 +16,15 @@ function firstN(text: string | undefined | null, n = 120) {
   return s.length <= n ? s : s.slice(0, n).trim() + "…";
 }
 
-function displayData(stats: any) {
-  console.log("DISPLAYING DATA:", stats);
-  showContent();
+function showStatus(text: string, visible = true) {
+  const s = $("status");
+  if (!s) return;
+  s.innerHTML = text;
+  s.style.display = visible ? "block" : "none";
+}
+
+function displayData(stats: StoryStats) {
+  showStatus("", false);
 
   const titleEl = $("title");
   const authorEl = $("author");
@@ -46,222 +34,145 @@ function displayData(stats: any) {
   const readsEl = $("reads");
   const votesEl = $("votes");
   const headerCommentsEl = $("headerComments");
-  const commentItemsCountEl = $("commentItemsCount");
+  const paragraphsCountEl = $("paragraphsCount");
+
   if (readsEl) readsEl.textContent = formatNumber(stats.reads);
   if (votesEl) votesEl.textContent = formatNumber(stats.votes);
   if (headerCommentsEl) headerCommentsEl.textContent = formatNumber(stats.headerComments);
-  if (commentItemsCountEl) commentItemsCountEl.textContent = formatNumber(stats.commentItemsCount);
-
-  const engagementRate = stats.reads && stats.votes && stats.reads > 0
-    ? ((stats.votes / stats.reads) * 100).toFixed(2) + "%"
-    : "—";
-  const commentRatio = stats.reads && stats.headerComments && stats.reads > 0
-    ? ((stats.headerComments / stats.reads) * 100).toFixed(2) + "%"
-    : "—";
+  if (paragraphsCountEl) paragraphsCountEl.textContent = formatNumber(stats.commentItemsCount);
 
   const engagementEl = $("engagementRate");
   const commentRatioEl = $("commentRatio");
+  const engagementRate = stats.reads && stats.votes && stats.reads > 0 ? ((stats.votes! / stats.reads!) * 100).toFixed(2) + "%" : "—";
+  const commentRatio = stats.reads && stats.headerComments && stats.reads > 0 ? ((stats.headerComments! / stats.reads!) * 100).toFixed(2) + "%" : "—";
   if (engagementEl) engagementEl.textContent = engagementRate;
   if (commentRatioEl) commentRatioEl.textContent = commentRatio;
 
+  // Top hits
   const topHitsList = $("topHitsList");
-  if (topHitsList && stats.paragraphComments) {
+  if (topHitsList) {
     topHitsList.innerHTML = "";
-    const top = [...stats.paragraphComments]
-      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-      .slice(0, 3);
-    top.forEach((p, index) => {
-      const li = document.createElement("li");
-      const count = p.count ?? 0;
-      const snippet = firstN(p.snippet || p.raw);
-      li.innerHTML = `
-        <div class="hit-item">
-          <span class="hit-rank" data-rank="#${index + 1}">P${stats.paragraphComments.indexOf(p) + 1}</span>
-          <div class="hit-content">
-            <span class="content-label">Content:</span> <span class="content-text">${snippet}</span>
-            <span class="comment-label">Comments:</span> <strong class="comment-count">${count} comment${count === 1 ? "" : "s"}</strong>
-          </div>
-        </div>
-      `;
-      if (index === 0) li.classList.add("top-hit");
-      else if (count < 5) li.classList.add("revise");
-      if (topHitsList) topHitsList.appendChild(li);
-    });
+    if (stats.paragraphComments && stats.paragraphComments.length > 0) {
+      const top = [...stats.paragraphComments].sort((a, b) => (b.count ?? 0) - (a.count ?? 0)).slice(0, 3);
+      top.forEach((p) => {
+        const li = document.createElement("li");
+        const snippet = firstN(p.snippet || p.raw || "", 80);
+        const count = p.count ?? 0;
+        li.innerHTML = `<span>${snippet}</span><span class="comment-badge">💬 ${count} comments</span>`;
+        topHitsList.appendChild(li);
+      });
+    } else {
+      topHitsList.innerHTML = `<li style="opacity:.7">No paragraph-level comments found</li>`;
+    }
   }
 
+  // Paragraphs
   const paragraphsList = $("paragraphsList");
-  if (paragraphsList && stats.paragraphComments) {
+  if (paragraphsList) {
     paragraphsList.innerHTML = "";
-    stats.paragraphComments.forEach((p: any) => {
-      const div = document.createElement("div");
-      div.classList.add("para");
-      const count = p.count ?? 0;
-      const snippet = firstN(p.snippet || p.raw);
-      div.innerHTML = `
-        <span class="para-number">P${stats.paragraphComments.indexOf(p) + 1}</span>
-        <div class="para-content">
-          <span class="content-label">Content:</span> <span class="content-text">${snippet}</span>
-          <span class="comment-label">Comments:</span> <span class="comment-count">${count} comment${count === 1 ? "" : "s"}</span>
-        </div>
-      `;
-      if (count > 5) div.classList.add("highlight");
-      else if (count < 2) div.classList.add("boost");
-      if (paragraphsList) paragraphsList.appendChild(div);
+    if (stats.paragraphComments && stats.paragraphComments.length > 0) {
+      stats.paragraphComments.forEach((p) => {
+        const div = document.createElement("div");
+        div.className = "para";
+        const snippet = firstN(p.snippet || p.raw || "", 90);
+        const count = p.count ?? 0;
+        div.innerHTML = `<span>${snippet}</span><span class="comment-badge">💬 ${count} comments</span>`;
+        if (count > 5) div.classList.add("highlight");
+        paragraphsList.appendChild(div);
+      });
+    } else {
+      paragraphsList.innerHTML = `<div style="padding:8px;opacity:.7">No paragraphs available</div>`;
+    }
+  }
+}
+
+// load latest cached stats (search keys writerAnalyticsStats-*)
+function loadCachedLatest(callback: (stats: StoryStats | null) => void) {
+  chrome.storage.local.get(null, (result) => {
+    const keys = Object.keys(result).filter(k => k.startsWith("writerAnalyticsStats-"));
+    if (keys.length === 0) {
+      callback(null);
+      return;
+    }
+    // prefer latest by capturedAt if available
+    let chosen: StoryStats | null = null;
+    let chosenKey = keys[0];
+    keys.forEach(k => {
+      const s = result[k];
+      if (!s) return;
+      if (!chosen) {
+        chosen = s;
+        chosenKey = k;
+        return;
+      }
+      try {
+        const a = s.capturedAt ? new Date(s.capturedAt).getTime() : 0;
+        const b = chosen.capturedAt ? new Date(chosen.capturedAt).getTime() : 0;
+        if (a > b) {
+          chosen = s;
+          chosenKey = k;
+        }
+      } catch {
+        // fallback: pick last key
+        chosen = s;
+        chosenKey = k;
+      }
     });
-  }
-
-  const suggestionEl = $("analyticsSuggestion");
-  if (suggestionEl && stats.paragraphComments) {
-    const minCountIndex = stats.paragraphComments.reduce((minIndex: number, p: any, i: number, arr: any[]) =>
-      (p.count ?? 0) < (arr[minIndex].count ?? 0) ? i : minIndex, 0);
-    if (suggestionEl) suggestionEl.textContent = minCountIndex >= 0 ? `_P${minCountIndex + 1} needs a twist!_` : "Keep writing!";
-  }
-
-  console.log("DATA DISPLAY COMPLETE!");
+    callback(chosen);
+  });
 }
 
 function loadData(forceRefresh = false) {
-  console.log("LOADING DATA FROM STORAGE...", { forceRefresh });
-  showStatus("🔄 Loading analytics...");
-  
-  try {
-    if (forceRefresh) {
-      console.log("[WriterAnalytics][popup] Forcing refresh, requesting new data from background...");
-      chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("[WriterAnalytics][popup] Error requesting refresh:", chrome.runtime.lastError);
-          if (chrome.runtime.lastError.message) {
-            console.error("Detailed Error:", chrome.runtime.lastError.message);
-          }
-          showStatus("❌ Refresh Error: Check console for details");
-          return;
-        }
-        if (response && response.payload) {
-          console.log("[WriterAnalytics][popup] Received refreshed data:", response.payload);
-          displayData(response.payload);
-        } else {
-          chrome.storage.local.get(null, (result) => {
-            const storyKeys = Object.keys(result).filter(key => key.startsWith('writerAnalyticsStats-'));
-            if (storyKeys.length > 0) {
-              const latestKey = storyKeys[storyKeys.length - 1];
-              const stats = result[latestKey];
-              if (stats) {
-                displayData(stats);
-              } else {
-                showStatus(`
-                  <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 32px;">📝</div>
-                    <div><strong>No Data Found</strong></div>
-                    <div style="font-size: 12px; color: #666;">Check storage or reload page!</div>
-                  </div>
-                `);
-              }
-            } else {
-              showStatus(`
-                <div style="text-align: center; padding: 20px;">
-                  <div style="font-size: 32px;">📝</div>
-                  <div><strong>No Data Found</strong></div>
-                  <div style="font-size: 12px; color: #666;">Visit a Wattpad story page first!</div>
-                </div>
-              `);
-            }
-          });
-        }
-      });
-    } else {
-      chrome.storage.local.get(null, (result) => {
-        console.log("ALL STORAGE DATA:", result);
-        const storyKeys = Object.keys(result).filter(key => key.startsWith('writerAnalyticsStats-'));
-        if (storyKeys.length > 0) {
-          const latestKey = storyKeys[storyKeys.length - 1];
-          const stats = result[latestKey];
-          if (stats) {
-            displayData(stats);
-          } else {
-            showStatus(`
-              <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 32px;">📝</div>
-                <div><strong>No Data Found</strong></div>
-                <div style="font-size: 12px; color: #666;">Check storage or reload page!</div>
-              </div>
-            `);
-          }
-        } else {
-          showStatus(`
-            <div style="text-align: center; padding: 20px;">
-              <div style="font-size: 32px;">📝</div>
-              <div><strong>No Data Found</strong></div>
-              <div style="font-size: 12px; color: #666;">Visit a Wattpad story page first!</div>
-            </div>
-          `);
-        }
-      });
-    }
-  } catch (error: any) {
-    console.error("CRITICAL ERROR:", error);
-    showStatus("❌ Critical Error: " + error.message);
-  }
-}
+  showStatus("🔄 Loading analytics...", true);
 
-// Theme toggle
-function initTheme() {
-  const themeToggle = $("theme-toggle");
-  if (themeToggle) {
-    themeToggle.addEventListener("click", function() {
-      const isDark = document.body.classList.toggle("dark-theme");
-      const icon = themeToggle.querySelector(".theme-icon");
-      if (icon) {
-        icon.textContent = isDark ? "☀️" : "🌙";
+  if (forceRefresh) {
+    chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn("Refresh request error:", chrome.runtime.lastError.message);
+        // fallback to cached
+        loadCachedLatest((s) => {
+          if (s) displayData(s);
+          else showStatus("No data found (refresh failed).", true);
+        });
+        return;
+      }
+
+      if (response && response.payload) {
+        displayData(response.payload);
+      } else {
+        loadCachedLatest((s) => {
+          if (s) displayData(s);
+          else showStatus("No data found after refresh.", true);
+        });
       }
     });
+  } else {
+    loadCachedLatest((s) => {
+      if (s) displayData(s);
+      else showStatus("Visit a Wattpad story page and let the extension collect data.", true);
+    });
   }
 }
 
-// Initialize and add refresh button listener
-console.log("POPUP SCRIPT STARTING...");
+document.addEventListener("DOMContentLoaded", () => {
+  // initial load
+  setTimeout(() => loadData(false), 80);
 
-document.addEventListener("DOMContentLoaded", function() {
-  console.log("DOM LOADED!");
-  initTheme();
+  // refresh button
+  $("refresh-btn")?.addEventListener("click", () => {
+    loadData(true);
+  });
 
-  const refreshBtn = $("refresh-btn");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", () => {
-      console.log("[WriterAnalytics][popup] Refresh button clicked");
-      loadData(true);
+  // export
+  $("export-btn")?.addEventListener("click", () => {
+    chrome.storage.local.get(null, (result) => {
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "writer-analytics.json";
+      a.click();
+      URL.revokeObjectURL(url);
     });
-  } else {
-    console.warn("[WriterAnalytics][popup] Refresh button not found, check HTML id");
-  }
-
-  setTimeout(loadData, 100);
+  });
 });
-
-// Emergency fallback
-setTimeout(function() {
-  console.log("EMERGENCY FALLBACK CHECK");
-  if ($("status")?.textContent?.includes("Loading")) {
-    console.log("STILL LOADING, RETRYING...");
-    loadData();
-  }
-}, 2000);
-
-// Add CSS for better styling
-const style = document.createElement("style");
-style.textContent = `
-  .top-hit { color: #26a69a; font-weight: bold; }
-  .revise { color: #666; font-style: italic; }
-  .highlight { background-color: #e0f7fa; padding: 5px; border-radius: 3px; }
-  .boost { color: #757575; }
-  .hit-item { display: flex; align-items: center; margin-bottom: 10px; }
-  .hit-rank { font-weight: bold; margin-right: 10px; }
-  .hit-content { flex-grow: 1; }
-  .content-label { font-weight: bold; color: #26a69a; }
-  .comment-label { font-weight: bold; color: #ab47bc; }
-  .content-text { margin-right: 10px; }
-  .comment-count { color: #ab47bc; }
-  .para { margin-bottom: 5px; }
-  .para-number { font-weight: bold; margin-right: 10px; }
-  .para-content { display: inline-block; }
-`;
-document.head.appendChild(style);

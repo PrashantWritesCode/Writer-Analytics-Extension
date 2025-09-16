@@ -1,23 +1,34 @@
 // src/background.ts
-var CACHE_KEY = "writerAnalyticsStats";
-async function loadCachedStats() {
-  try {
-    const result = await chrome.storage.local.get([CACHE_KEY]);
-    const cached = result[CACHE_KEY];
-    console.log("[WriterAnalytics][background] loaded cached stats", !!cached);
-    return cached || null;
-  } catch (err) {
-    console.error("[WriterAnalytics][background] Error loading cache:", err);
-    return null;
-  }
+console.log("[background] service worker starting");
+async function loadAllSavedStats() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(null, (all) => {
+      const keys = Object.keys(all).filter((k) => k.startsWith("writerAnalyticsStats-"));
+      const arr = keys.map((k) => ({ key: k, stats: all[k] }));
+      resolve(arr);
+    });
+  });
 }
-async function saveCachedStats(stats) {
-  try {
-    await chrome.storage.local.set({ [CACHE_KEY]: stats });
-    console.log("[WriterAnalytics][background] saved stats for", stats.title);
-  } catch (err) {
-    console.error("[WriterAnalytics][background] Error saving cache:", err);
-  }
+async function loadLatestSavedStats() {
+  const arr = await loadAllSavedStats();
+  if (arr.length === 0)
+    return null;
+  arr.sort((a, b) => {
+    const ta = a.stats?.capturedAt ? new Date(a.stats.capturedAt).getTime() : 0;
+    const tb = b.stats?.capturedAt ? new Date(b.stats.capturedAt).getTime() : 0;
+    return tb - ta;
+  });
+  return arr[0].stats || null;
+}
+async function saveStatsForStory(stats) {
+  const sid = stats.storyId || `unknown-${Date.now()}`;
+  const key = `writerAnalyticsStats-${sid}`;
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [key]: stats }, () => {
+      console.log("[background] saved stats under", key);
+      resolve();
+    });
+  });
 }
 async function injectContentScript(tabId, url) {
   try {
@@ -25,118 +36,128 @@ async function injectContentScript(tabId, url) {
       target: { tabId },
       files: ["content.js"]
     });
-    console.log(`[WriterAnalytics][background] reinjected content.js into ${url}`);
+    console.log(`[background] injected content.js into ${url}`);
   } catch (err) {
-    console.warn(`[WriterAnalytics][background] failed to inject into ${url}:`, err);
+    console.warn(`[background] inject failed for ${url}:`, err);
   }
 }
-function isWattpadStory(url) {
-  return url.includes("wattpad.com") && /\/\d+-/.test(url);
-}
-console.log("[WriterAnalytics][background] service worker starting");
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log("[WriterAnalytics][background] onInstalled", details.reason);
   try {
     const tabs = await chrome.tabs.query({ url: "*://www.wattpad.com/*" });
-    for (const tab of tabs) {
-      if (tab.id && tab.url && isWattpadStory(tab.url)) {
-        await injectContentScript(tab.id, tab.url);
+    for (const t of tabs) {
+      if (t.id && t.url && t.url.includes("/")) {
+        await injectContentScript(t.id, t.url);
       }
     }
   } catch (err) {
-    console.error("[WriterAnalytics][background] Error injecting into existing tabs:", err);
-  }
-});
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" && tab.url && isWattpadStory(tab.url)) {
-    await injectContentScript(tabId, tab.url);
+    console.error("[background] onInstalled error:", err);
   }
 });
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("[WriterAnalytics][background] Received message:", message.type);
-  if (message.type === "WA_STATS") {
-    (async () => {
-      try {
+  (async () => {
+    try {
+      if (!message || !message.type) {
+        sendResponse({ success: false, error: "invalid message" });
+        return;
+      }
+      if (message.type === "WA_STATS") {
         const stats = message.payload;
-        console.log("[WriterAnalytics][background] caching WA_STATS", stats.title);
-        await saveCachedStats(stats);
-        chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats }, (response) => {
+        if (stats && stats.storyId) {
+          await saveStatsForStory(stats);
+        } else if (stats) {
+          await saveStatsForStory(stats);
+        }
+        chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats }, () => {
           if (chrome.runtime.lastError) {
-            console.warn("[WriterAnalytics][background] No popup to update:", chrome.runtime.lastError.message);
           }
         });
         sendResponse({ success: true });
-      } catch (err) {
-        console.error("[WriterAnalytics][background] Error handling WA_STATS:", err);
-        sendResponse({ success: false, error: err.message });
+        return;
       }
-    })();
-    return true;
-  }
-  if (message.type === "GET_WA_STATS") {
-    (async () => {
-      try {
-        const stats = await loadCachedStats();
-        console.log("[WriterAnalytics][background] Sending cached stats:", !!stats);
+      if (message.type === "GET_WA_STATS") {
+        const stats = await loadLatestSavedStats();
         sendResponse({ success: true, stats });
-      } catch (err) {
-        console.error("[WriterAnalytics][background] Error loading cached stats:", err);
-        sendResponse({ success: false, error: err.message });
+        return;
       }
-    })();
-    return true;
-  }
-  if (message.type === "WA_REFRESH") {
-    (async () => {
-      try {
-        chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (response) => {
-          if (response && response.payload) {
-            console.log("[WriterAnalytics][background] Received refreshed stats:", response.payload);
-            saveCachedStats(response.payload).then(() => {
-              sendResponse({ success: true, payload: response.payload });
-            });
-          } else {
-            loadCachedStats().then((stats) => {
-              sendResponse({ success: true, payload: stats });
-            });
-          }
-        });
-      } catch (err) {
-        console.error("[WriterAnalytics][background] Error handling WA_REFRESH:", err);
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-  if (message.type === "WA_URL_CHANGE") {
-    (async () => {
-      try {
+      if (message.type === "WA_REFRESH") {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0] && tabs[0].id) {
-            chrome.scripting.executeScript({
-              target: { tabId: tabs[0].id },
-              func: () => {
-                return window.extractStoryStats ? window.extractStoryStats() : null;
-              }
-            }, async (injectionResults) => {
-              if (injectionResults && injectionResults[0] && injectionResults[0].result) {
-                const stats = injectionResults[0].result;
-                await saveCachedStats(stats);
-                chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats });
-                sendResponse({ success: true });
-              } else {
-                sendResponse({ success: false });
-              }
-            });
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            loadLatestSavedStats().then((stats) => sendResponse({ success: true, payload: stats }));
+            return;
           }
+          const tabId = tabs[0].id;
+          chrome.tabs.sendMessage(tabId, { type: "WA_REFRESH" }, async (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn("[background] sendMessage to tab failed:", chrome.runtime.lastError.message);
+              try {
+                await injectContentScript(tabId, tabs[0].url || "");
+                chrome.tabs.sendMessage(tabId, { type: "WA_REFRESH" }, (resp2) => {
+                  if (resp2 && resp2.payload) {
+                    saveStatsForStory(resp2.payload).then(() => {
+                      sendResponse({ success: true, payload: resp2.payload });
+                    });
+                  } else {
+                    loadLatestSavedStats().then((stats) => sendResponse({ success: true, payload: stats }));
+                  }
+                });
+              } catch (err) {
+                loadLatestSavedStats().then((stats) => sendResponse({ success: true, payload: stats }));
+              }
+              return;
+            }
+            if (response && response.payload) {
+              await saveStatsForStory(response.payload);
+              sendResponse({ success: true, payload: response.payload });
+            } else {
+              const stats = await loadLatestSavedStats();
+              sendResponse({ success: true, payload: stats });
+            }
+          });
         });
-      } catch (err) {
-        console.error("[WriterAnalytics][background] Error handling WA_URL_CHANGE:", err);
-        sendResponse({ success: false, error: err.message });
+        return;
       }
-    })();
-    return true;
-  }
-  return false;
+      if (message.type === "WA_URL_CHANGE") {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (!tabs || !tabs[0] || !tabs[0].id) {
+            sendResponse({ success: false });
+            return;
+          }
+          const tabId = tabs[0].id;
+          chrome.scripting.executeScript({
+            target: { tabId },
+            func: () => {
+              try {
+                const fn = window.extractStoryStats;
+                return fn ? fn() : null;
+              } catch (e) {
+                return null;
+              }
+            }
+          }, async (injectionResults) => {
+            if (injectionResults && injectionResults[0] && injectionResults[0].result) {
+              const stats = injectionResults[0].result;
+              if (stats) {
+                await saveStatsForStory(stats);
+                chrome.runtime.sendMessage({ type: "WA_UPDATE", payload: stats }, () => {
+                });
+                sendResponse({ success: true });
+                return;
+              }
+            }
+            sendResponse({ success: false });
+          });
+        });
+        return;
+      }
+      sendResponse({ success: false, error: "unknown type" });
+    } catch (err) {
+      console.error("[background] message handler error:", err);
+      try {
+        sendResponse({ success: false, error: err.message || "error" });
+      } catch {
+      }
+    }
+  })();
+  return true;
 });
 //# sourceMappingURL=background.js.map

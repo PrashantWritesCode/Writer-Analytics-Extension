@@ -1,113 +1,6 @@
 "use strict";
 (() => {
   // src/content.ts
-  function extractStoryStats() {
-    try {
-      console.log("[WriterAnalytics][content] Starting data extraction...");
-      const titleSelectors = [
-        'h1[data-testid="story-title"]',
-        "h1.story-title",
-        "h1.h2",
-        ".story-header h1",
-        ".part-title h1",
-        "h1:first-of-type"
-      ];
-      let title = null;
-      for (const selector of titleSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          title = el.textContent.trim();
-          console.log(`[WriterAnalytics][content] Found title using selector: ${selector}`);
-          break;
-        }
-      }
-      const authorSelectors = [
-        '[data-testid="story-author"] a',
-        ".author-name a",
-        ".story-author a",
-        ".username a",
-        ".author a"
-      ];
-      let author = null;
-      for (const selector of authorSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          author = el.textContent.trim();
-          console.log(`[WriterAnalytics][content] Found author using selector: ${selector}`);
-          break;
-        }
-      }
-      const readsSelectors = [
-        '[data-testid="story-stats"] span:first-child',
-        ".reads-count",
-        ".story-stats .reads",
-        ".stats .reads"
-      ];
-      let reads = null;
-      for (const selector of readsSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          reads = parseNumber(el.textContent.trim());
-          console.log(`[WriterAnalytics][content] Found reads using selector: ${selector}, value: ${reads}`);
-          break;
-        }
-      }
-      const votesSelectors = [
-        '[data-testid="story-votes"] span',
-        ".votes-count",
-        ".story-stats .votes",
-        ".stats .votes"
-      ];
-      let votes = null;
-      for (const selector of votesSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          votes = parseNumber(el.textContent.trim());
-          console.log(`[WriterAnalytics][content] Found votes using selector: ${selector}, value: ${votes}`);
-          break;
-        }
-      }
-      const commentsSelectors = [
-        '[data-testid="story-comments"] span',
-        ".comments-count",
-        ".story-stats .comments",
-        ".stats .comments"
-      ];
-      let headerComments = null;
-      for (const selector of commentsSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          headerComments = parseNumber(el.textContent.trim());
-          console.log(`[WriterAnalytics][content] Found comments using selector: ${selector}, value: ${headerComments}`);
-          break;
-        }
-      }
-      const paragraphComments = extractParagraphComments();
-      const stats = {
-        title,
-        author,
-        reads,
-        votes,
-        headerComments,
-        commentItemsCount: paragraphComments.length,
-        paragraphComments,
-        capturedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      console.log("[WriterAnalytics][content] Extracted stats:", stats);
-      if (!title && !author && !reads && !votes && !headerComments && paragraphComments.length === 0) {
-        console.warn("[WriterAnalytics][content] No data extracted, returning null");
-        return null;
-      }
-      const storyId = window.location.pathname.split("/").pop() || "unknown-story";
-      chrome.storage.local.set({ [`writerAnalyticsStats-${storyId}`]: stats }, () => {
-        console.log(`[WriterAnalytics][content] Saved stats for story ${storyId}`);
-      });
-      return stats;
-    } catch (err) {
-      console.error("[WriterAnalytics][content] Error extracting stats:", err);
-      return null;
-    }
-  }
   function parseNumber(text) {
     if (!text)
       return null;
@@ -126,12 +19,31 @@
   function extractParagraphComments() {
     const paragraphs = [];
     try {
-      console.log("[WriterAnalytics][content] Extracting paragraph comments...");
       const pages = document.querySelectorAll(".page.highlighter");
-      console.log("[WriterAnalytics][content] Found pages:", pages.length);
+      if (!pages || pages.length === 0) {
+        const fallback = document.querySelectorAll("p[data-p-id]");
+        fallback.forEach((p) => {
+          const pId = p.getAttribute("data-p-id") || `p-${paragraphs.length}`;
+          const text = p.textContent?.trim() || "";
+          if (text.length < 10)
+            return;
+          const commentElement = p.querySelector(".num-comment");
+          let count = 0;
+          if (commentElement) {
+            const countText = commentElement.textContent?.trim() || "0";
+            count = parseNumber(countText) || 0;
+          }
+          paragraphs.push({
+            pId,
+            count,
+            raw: text,
+            snippet: text.slice(0, 150) + (text.length > 150 ? "..." : "")
+          });
+        });
+        return paragraphs;
+      }
       pages.forEach((page) => {
         const paragraphElements = page.querySelectorAll("p[data-p-id]");
-        console.log(`[WriterAnalytics][content] Found ${paragraphElements.length} paragraphs in page`);
         paragraphElements.forEach((p) => {
           const pId = p.getAttribute("data-p-id") || `p-${paragraphs.length}`;
           const text = p.textContent?.trim() || "";
@@ -142,9 +54,6 @@
           if (commentElement) {
             const countText = commentElement.textContent?.trim() || "0";
             count = parseNumber(countText) || 0;
-            console.log(`[WriterAnalytics][content] Found comment count ${count} for pId ${pId}`);
-          } else {
-            console.warn(`[WriterAnalytics][content] No comment count found for pId ${pId}, setting to 0`);
           }
           paragraphs.push({
             pId,
@@ -154,115 +63,191 @@
           });
         });
       });
-      console.log(`[WriterAnalytics][content] Extracted ${paragraphs.length} paragraphs with comments`);
     } catch (err) {
-      console.error("[WriterAnalytics][content] Error extracting paragraph comments:", err);
+      console.error("[content] paragraph extraction error:", err);
     }
     return paragraphs;
   }
-  function sendStatsToBackground(stats) {
+  function extractStoryStats() {
     try {
-      console.log("[WriterAnalytics][content] Sending stats to background:", stats);
-      chrome.runtime.sendMessage({
-        type: "WA_STATS",
-        payload: stats
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("[WriterAnalytics][content] Error sending stats:", chrome.runtime.lastError);
-        } else {
-          console.log("[WriterAnalytics][content] Stats sent successfully:", response);
+      const titleSelectors = [
+        'h1[data-testid="story-title"]',
+        "h1.story-title",
+        "h1.h2",
+        ".story-header h1",
+        ".part-title h1",
+        "h1:first-of-type"
+      ];
+      let title = null;
+      for (const sel of titleSelectors) {
+        const el = document.querySelector(sel);
+        if (el?.textContent?.trim()) {
+          title = el.textContent.trim();
+          break;
         }
-      });
+      }
+      const authorSelectors = [
+        '[data-testid="story-author"] a',
+        ".author-name a",
+        ".story-author a",
+        ".username a",
+        ".author a"
+      ];
+      let author = null;
+      for (const sel of authorSelectors) {
+        const el = document.querySelector(sel);
+        if (el?.textContent?.trim()) {
+          author = el.textContent.trim();
+          break;
+        }
+      }
+      const readsSelectors = [
+        '[data-testid="story-stats"] span:first-child',
+        ".reads-count",
+        ".story-stats .reads",
+        ".stats .reads"
+      ];
+      let reads = null;
+      for (const sel of readsSelectors) {
+        const el = document.querySelector(sel);
+        if (el?.textContent?.trim()) {
+          reads = parseNumber(el.textContent.trim());
+          break;
+        }
+      }
+      const votesSelectors = [
+        '[data-testid="story-votes"] span',
+        ".votes-count",
+        ".story-stats .votes",
+        ".stats .votes"
+      ];
+      let votes = null;
+      for (const sel of votesSelectors) {
+        const el = document.querySelector(sel);
+        if (el?.textContent?.trim()) {
+          votes = parseNumber(el.textContent.trim());
+          break;
+        }
+      }
+      const commentsSelectors = [
+        '[data-testid="story-comments"] span',
+        ".comments-count",
+        ".story-stats .comments",
+        ".stats .comments"
+      ];
+      let headerComments = null;
+      for (const sel of commentsSelectors) {
+        const el = document.querySelector(sel);
+        if (el?.textContent?.trim()) {
+          headerComments = parseNumber(el.textContent.trim());
+          break;
+        }
+      }
+      const paragraphComments = extractParagraphComments();
+      const storyId = (window.location.pathname.split("/").pop() || "unknown-story").replace(/\?.*$/, "");
+      const stats = {
+        storyId,
+        title,
+        author,
+        reads,
+        votes,
+        headerComments,
+        commentItemsCount: paragraphComments.length,
+        paragraphComments,
+        capturedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      if (!title && !author && !reads && !votes && !headerComments && paragraphComments.length === 0) {
+        return null;
+      }
+      const key = `writerAnalyticsStats-${storyId}`;
+      try {
+        chrome.storage.local.set({ [key]: stats }, () => {
+          console.log(`[content] saved stats to ${key}`);
+        });
+      } catch (err) {
+        console.warn("[content] storage set error:", err);
+      }
+      try {
+        chrome.runtime.sendMessage({ type: "WA_STATS", payload: stats }, (resp) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[content] sendMessage WA_STATS error:", chrome.runtime.lastError.message);
+          }
+        });
+      } catch (err) {
+        console.warn("[content] send WA_STATS failed:", err);
+      }
+      return stats;
     } catch (err) {
-      console.error("[WriterAnalytics][content] Error in sendStatsToBackground:", err);
+      console.error("[content] extractStoryStats error:", err);
+      return null;
     }
   }
   function waitForPageContent() {
     return new Promise((resolve) => {
-      const checkContent = () => {
-        const hasContent = document.querySelector("h1") || document.querySelector(".story-title") || document.querySelector("p");
-        if (hasContent) {
-          console.log("[WriterAnalytics][content] Page content detected");
-          resolve();
-        } else {
-          console.log("[WriterAnalytics][content] Waiting for page content...");
-          setTimeout(checkContent, 500);
-        }
+      const check = () => {
+        const has = document.querySelector("h1") || document.querySelector(".story-title") || document.querySelector("p");
+        if (has)
+          return resolve();
+        setTimeout(check, 500);
       };
-      checkContent();
+      check();
     });
   }
   async function init() {
-    console.log("[WriterAnalytics][content] Content script loaded on:", window.location.href);
-    if (!window.location.href.includes("wattpad.com") || !window.location.pathname.includes("/")) {
-      console.log("[WriterAnalytics][content] Not a Wattpad story page, skipping");
+    if (!window.location.href.includes("wattpad.com"))
       return;
-    }
     try {
       await waitForPageContent();
-      await new Promise((resolve) => setTimeout(resolve, 2e3));
+      await new Promise((r) => setTimeout(r, 1e3));
       const stats = extractStoryStats();
-      if (stats) {
-        sendStatsToBackground(stats);
-      } else {
-        console.log("[WriterAnalytics][content] No stats extracted from this page");
-        const sampleStats = {
-          title: "Sample Story Title (No Real Data Found)",
+      if (!stats) {
+        const sample = {
+          storyId: "sample",
+          title: "Sample Story Title (no data found)",
           author: "Sample Author",
           reads: 1234,
           votes: 56,
           headerComments: 12,
-          commentItemsCount: 5,
+          commentItemsCount: 3,
           paragraphComments: [
-            { pId: "p1", count: 5, snippet: "This is a sample paragraph for testing..." },
-            { pId: "p2", count: 3, snippet: "Another sample paragraph..." },
-            { pId: "p3", count: 8, snippet: "Third sample paragraph with more engagement..." }
+            { pId: "p1", count: 5, snippet: "This is sample paragraph one..." },
+            { pId: "p2", count: 3, snippet: "Sample paragraph two..." },
+            { pId: "p3", count: 8, snippet: "Sample paragraph three..." }
           ],
           capturedAt: (/* @__PURE__ */ new Date()).toISOString()
         };
-        console.log("[WriterAnalytics][content] Sending sample data for testing");
-        sendStatsToBackground(sampleStats);
+        chrome.runtime.sendMessage({ type: "WA_STATS", payload: sample }, () => {
+        });
       }
     } catch (err) {
-      console.error("[WriterAnalytics][content] Error in init:", err);
+      console.error("[content] init error:", err);
     }
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    setTimeout(init, 1e3);
-  }
-  var lastUrl = window.location.href;
-  setInterval(() => {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href;
-      console.log("[WriterAnalytics][content] URL changed to:", lastUrl);
-      init();
-    }
-  }, 1e3);
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || !message.type)
+      return;
     if (message.type === "WA_REFRESH") {
-      console.log("[WriterAnalytics][content] Received WA_REFRESH, re-extracting stats...");
       const stats = extractStoryStats();
-      if (stats) {
-        sendStatsToBackground(stats);
-        sendResponse({ payload: stats });
-      } else {
-        sendResponse({ payload: null });
-      }
+      sendResponse({ payload: stats || null });
       return true;
     }
     if (message.type === "WA_URL_CHANGE") {
-      console.log("[WriterAnalytics][content] Received WA_URL_CHANGE, re-extracting stats...");
       const stats = extractStoryStats();
-      if (stats) {
-        sendStatsToBackground(stats);
-        sendResponse({ success: true, payload: stats });
-      } else {
-        sendResponse({ success: false });
-      }
+      sendResponse({ success: !!stats, payload: stats || null });
       return true;
     }
   });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    setTimeout(init, 800);
+  }
+  var lastUrl = location.href;
+  setInterval(() => {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      init();
+    }
+  }, 1e3);
 })();
 //# sourceMappingURL=content.js.map
