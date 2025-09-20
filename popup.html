@@ -7,44 +7,57 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="header">
-    <div>
-      <h1 id="title" class="story-title">Story Title</h1>
-      <p id="author" class="story-author">by Unknown Author</p>
+  <!-- EXPORT AREA: only this block will be exported as PNG -->
+  <div id="export-area">
+    <div class="header">
+      <div>
+        <h1 id="title" class="story-title">Story Title</h1>
+        <p id="author" class="story-author">by Unknown Author</p>
+      </div>
     </div>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number" id="reads">—</div>
+        <div class="stat-label">Reads</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="votes">—</div>
+        <div class="stat-label">Votes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="headerComments">—</div>
+        <div class="stat-label">Comments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="commentItemsCount">—</div>
+        <div class="stat-label">Paragraphs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="engagementRate">—</div>
+        <div class="stat-label">Engagement Rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="commentRatio">—</div>
+        <div class="stat-label">Comment Ratio</div>
+      </div>
+    </section>
+
+    <div class="section-title">✨ Top Moments</div>
+    <ul id="topHitsList" class="top-hits-list"></ul>
   </div>
 
-  <!-- Stats Section -->
-  <section class="stats-grid">
-    <div class="stat-card"><span id="reads">—</span><p>Reads</p></div>
-    <div class="stat-card"><span id="votes">—</span><p>Votes</p></div>
-    <div class="stat-card"><span id="headerComments">—</span><p>Comments</p></div>
-    <div class="stat-card"><span id="paragraphsCount">—</span><p>Paragraphs</p></div>
-    <div class="stat-card"><span id="engagementRate">—</span><p>Engagement Rate</p></div>
-    <div class="stat-card"><span id="commentRatio">—</span><p>Comment Ratio</p></div>
-  </section>
+  <!-- BELOW export-area: not included in exported PNG -->
+  <div class="section-title" style="margin-top:14px">📚 All Paragraphs</div>
+  <div id="paragraphsList" class="paragraphs-list"></div>
 
-  <!-- Top Moments -->
-  <section>
-    <h2 class="section-title">✨ Top Moments</h2>
-    <ul id="topHitsList" class="moments-list"></ul>
-  </section>
-
-  <!-- All Paragraphs -->
-  <section>
-    <h2 class="section-title">📖 All Paragraphs</h2>
-    <div id="paragraphsList" class="paragraphs-list"></div>
-  </section>
-
-  <!-- Actions -->
-  <footer class="actions">
-    <button id="export-btn" class="btn gradient-btn">📤 Export</button>
+  <div class="action-buttons">
+    <button id="export-btn" class="btn gradient-btn">⬇ Export</button>
     <button id="refresh-btn" class="btn outline-btn">🔄 Refresh</button>
-  </footer>
+  </div>
 
-  <div id="status" class="status">🔄 Loading analytics...</div>
+  <div id="status" class="status" aria-live="polite">🔄 Loading analytics...</div>
 
-  <!-- build produces dist/popup.js; popup.ts compiles to popup.js as an ES module -->
   <script type="module" src="popup.js"></script>
 </body>
 </html>
