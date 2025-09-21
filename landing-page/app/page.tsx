@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 
 export default function LandingPage() {
   const emailRef = useRef<HTMLInputElement | null>(null);
+  const instagramRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -32,6 +33,11 @@ export default function LandingPage() {
       return;
     }
 
+    if (!instagramRef.current?.value) {
+      setMessage("⚠️ Please enter your Instagram (author/page ID)");
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
@@ -39,6 +45,7 @@ export default function LandingPage() {
       const { error } = await supabase.from("waitlist").insert([
         {
           email: emailRef.current.value,
+          instagram: instagramRef.current.value,
         },
       ]);
 
@@ -56,6 +63,7 @@ export default function LandingPage() {
       } else {
         setMessage("✅ You’ve joined the waitlist! Thank you 🚀");
         emailRef.current.value = "";
+        instagramRef.current.value = "";
       }
     } catch (err: unknown) {
       setMessage("❌ Something went wrong. Please try again.");
@@ -155,12 +163,18 @@ export default function LandingPage() {
             Join hundreds of authors already on the waitlist.
           </span>
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+        <div className="flex flex-col gap-4 justify-center max-w-md mx-auto">
           <input
             ref={emailRef}
             type="email"
             placeholder="Enter your email"
             className="px-4 py-3 border rounded-lg flex-1 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+          />
+          <input
+            ref={instagramRef}
+            type="text"
+            placeholder="Enter your author/page Instagram ID"
+            className="px-4 py-3 border rounded-lg flex-1 focus:ring-2 focus:ring-pink-500 outline-none transition"
           />
           <Button
             onClick={handleJoinWaitlist}
