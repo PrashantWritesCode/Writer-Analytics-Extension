@@ -8069,8 +8069,14 @@ function setupExportButton() {
       return alert("Nothing to export");
     try {
       const canvas = await (0, import_html2canvas.default)(exportArea, {
-        backgroundColor: null,
-        scale: 2
+        backgroundColor: "#ffffff",
+        // ensure solid white background
+        scale: 2,
+        // increase for sharper output
+        useCORS: true,
+        // fix images/icons if needed
+        width: exportArea.scrollWidth,
+        height: exportArea.scrollHeight
       });
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");

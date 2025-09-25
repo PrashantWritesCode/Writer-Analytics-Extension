@@ -248,8 +248,11 @@ function setupExportButton() {
 
     try {
       const canvas = await html2canvas(exportArea as HTMLElement, {
-        backgroundColor: null,
-        scale: 2,
+        backgroundColor: "#ffffff",  // ensure solid white background
+        scale: 2,                    // increase for sharper output
+        useCORS: true,               // fix images/icons if needed
+        width: exportArea.scrollWidth,
+        height: exportArea.scrollHeight,
       });
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");

@@ -29,6 +29,16 @@ body.analyze-mode {
   padding: 24px;
 }
 
+/* ===== Export Area (ensures PNG matches UI) ===== */
+#export-area {
+  background: #ffffff;            /* solid white for clean PNG */
+  border-radius: 12px;
+  padding: 16px;
+  width: 100%;                    /* consistent width */
+  max-width: 600px;               /* limit so layout doesn’t stretch */
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+}
+
 /* Header */
 .header {
   display:flex;
