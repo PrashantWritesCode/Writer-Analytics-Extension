@@ -8088,10 +8088,26 @@ function setupRefreshButton() {
     return;
   btn.addEventListener("click", () => refreshData());
 }
+function setupAnalyzeButton() {
+  const btn = $("analyze-btn");
+  if (!btn)
+    return;
+  btn.addEventListener("click", () => {
+    const analyzeScreen = $("analyze-screen");
+    const analyticsUI = $("analytics-ui");
+    if (analyzeScreen)
+      analyzeScreen.style.display = "none";
+    if (analyticsUI)
+      analyticsUI.style.display = "block";
+    document.body.classList.remove("analyze-mode");
+    refreshData();
+  });
+}
 document.addEventListener("DOMContentLoaded", () => {
+  document.body.classList.add("analyze-mode");
+  setupAnalyzeButton();
   setupExportButton();
   setupRefreshButton();
-  loadCachedLatest().then((s) => displayData(s));
 });
 /*! Bundled license information:
 

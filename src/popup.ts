@@ -1,5 +1,3 @@
-// popup.ts
-
 import html2canvas from "html2canvas";  // ✅ Import html2canvas
 
 function $<T extends HTMLElement = HTMLElement>(id: string): T | null {
@@ -271,9 +269,31 @@ function setupRefreshButton() {
   btn.addEventListener("click", () => refreshData());
 }
 
+/* ------------------ Analyze btn ------------------ */
+function setupAnalyzeButton() {
+  const btn = $("analyze-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const analyzeScreen = $("analyze-screen");
+    const analyticsUI = $("analytics-ui");
+
+    if (analyzeScreen) analyzeScreen.style.display = "none";
+    if (analyticsUI) analyticsUI.style.display = "block";
+
+    // Switch body to full analytics mode
+    document.body.classList.remove("analyze-mode");
+
+    refreshData(); // load stats after showing analytics
+  });
+}
+
 /* ------------------ Init ------------------ */
 document.addEventListener("DOMContentLoaded", () => {
+  // Start in compact mode for Analyze screen
+  document.body.classList.add("analyze-mode");
+
+  setupAnalyzeButton();
   setupExportButton();
   setupRefreshButton();
-  loadCachedLatest().then((s) => displayData(s));
+  // don’t load stats immediately; wait until Analyze is clicked
 });

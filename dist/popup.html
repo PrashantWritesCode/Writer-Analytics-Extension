@@ -1,63 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Writer Analytics</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
+
 <body>
-  <!-- EXPORT AREA: only this block will be exported as PNG -->
-  <div id="export-area">
-    <div class="header">
-      <div>
-        <h1 id="title" class="story-title">Story Title</h1>
-        <p id="author" class="story-author">by Unknown Author</p>
+  <!-- Analyze Screen (shown first) -->
+  <div id="analyze-screen" class="analyze-section">
+    <button id="analyze-btn" class="btn gradient-btn">🔍 Analyze Story</button>
+    <p class="disclaimer">
+      🔒 Your privacy is safe. This tool only shows stats already visible in your browser.
+      Everything is processed <strong>locally on your computer</strong> — nothing is collected or sent anywhere.
+    </p>
+  </div>
+
+  <!-- Analytics UI (hidden until Analyze is clicked) -->
+  <div id="analytics-ui" style="display:none;">
+    <!-- EXPORT AREA: only this block will be exported as PNG -->
+    <div id="export-area">
+      <div class="header">
+        <div>
+          <h1 id="title" class="story-title">Story Title</h1>
+          <p id="author" class="story-author">by Unknown Author</p>
+        </div>
       </div>
+
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="reads">—</div>
+          <div class="stat-label">Reads</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="votes">—</div>
+          <div class="stat-label">Votes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="headerComments">—</div>
+          <div class="stat-label">Comments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="commentItemsCount">—</div>
+          <div class="stat-label">Paragraphs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="engagementRate">—</div>
+          <div class="stat-label">Engagement Rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="commentRatio">—</div>
+          <div class="stat-label">Comment Ratio</div>
+        </div>
+      </section>
+
+      <div class="section-title">✨ Top Moments</div>
+      <ul id="topHitsList" class="top-hits-list"></ul>
     </div>
 
-    <section class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-number" id="reads">—</div>
-        <div class="stat-label">Reads</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="votes">—</div>
-        <div class="stat-label">Votes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="headerComments">—</div>
-        <div class="stat-label">Comments</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="commentItemsCount">—</div>
-        <div class="stat-label">Paragraphs</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="engagementRate">—</div>
-        <div class="stat-label">Engagement Rate</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="commentRatio">—</div>
-        <div class="stat-label">Comment Ratio</div>
-      </div>
-    </section>
+    <!-- BELOW export-area: not included in exported PNG -->
+    <div class="section-title" style="margin-top:14px">📚 All Paragraphs</div>
+    <div id="paragraphsList" class="paragraphs-list"></div>
 
-    <div class="section-title">✨ Top Moments</div>
-    <ul id="topHitsList" class="top-hits-list"></ul>
+    <div class="action-buttons">
+      <button id="export-btn" class="btn gradient-btn">⬇ Export</button>
+      <button id="refresh-btn" class="btn outline-btn">🔄 Refresh</button>
+    </div>
+
+    <div id="status" class="status" aria-live="polite">🔄 Loading analytics...</div>
   </div>
-
-  <!-- BELOW export-area: not included in exported PNG -->
-  <div class="section-title" style="margin-top:14px">📚 All Paragraphs</div>
-  <div id="paragraphsList" class="paragraphs-list"></div>
-
-  <div class="action-buttons">
-    <button id="export-btn" class="btn gradient-btn">⬇ Export</button>
-    <button id="refresh-btn" class="btn outline-btn">🔄 Refresh</button>
-  </div>
-
-  <div id="status" class="status" aria-live="polite">🔄 Loading analytics...</div>
 
   <script type="module" src="popup.js"></script>
 </body>
+
 </html>
