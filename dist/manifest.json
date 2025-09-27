@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "description": "Collects basic story stats from Wattpad & Webnovel and shows them to authors.",
   "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "https://www.wattpad.com/*",
+    "https://www.webnovel.com/*"
+  ],
   "action": {
     "default_popup": "dist/popup.html",
     "default_title": "Writer Analytics"
@@ -15,7 +18,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://www.wattpad.com/*",
+        "https://www.webnovel.com/*"
+      ],
       "js": ["dist/content.js"],
       "run_at": "document_idle"
     }
@@ -28,7 +34,10 @@
   "web_accessible_resources": [
     {
       "resources": ["assets/*.png"],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "https://www.wattpad.com/*",
+        "https://www.webnovel.com/*"
+      ]
     }
   ]
 }
