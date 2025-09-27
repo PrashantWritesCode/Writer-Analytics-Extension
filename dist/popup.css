@@ -268,3 +268,28 @@ body.analyze-mode {
   max-width: 95%;
   text-align: center;
 }
+
+/* ===== Feedback Section ===== */
+.feedback-section {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #eef2f5;
+  text-align: center;
+}
+.feedback-text {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+#feedback-btn {
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+}
+#feedback-btn:hover {
+  background: #e5e7eb;
+}

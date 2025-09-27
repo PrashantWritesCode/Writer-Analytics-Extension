@@ -290,6 +290,17 @@ function setupAnalyzeButton() {
   });
 }
 
+/* ------------------ Feedback btn ------------------ */
+function setupFeedbackButton() {
+  const btn = $("feedback-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    chrome.tabs.create({
+      url: "https://forms.gle/JEBaepXGLnaufZPn9" // 🔗 replace with your Google Form link
+    });
+  });
+}
+
 /* ------------------ Init ------------------ */
 document.addEventListener("DOMContentLoaded", () => {
   // Start in compact mode for Analyze screen
@@ -298,5 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAnalyzeButton();
   setupExportButton();
   setupRefreshButton();
+  setupFeedbackButton();
   // don’t load stats immediately; wait until Analyze is clicked
 });

@@ -8109,11 +8109,23 @@ function setupAnalyzeButton() {
     refreshData();
   });
 }
+function setupFeedbackButton() {
+  const btn = $("feedback-btn");
+  if (!btn)
+    return;
+  btn.addEventListener("click", () => {
+    chrome.tabs.create({
+      url: "https://forms.gle/JEBaepXGLnaufZPn9"
+      // 🔗 replace with your Google Form link
+    });
+  });
+}
 document.addEventListener("DOMContentLoaded", () => {
   document.body.classList.add("analyze-mode");
   setupAnalyzeButton();
   setupExportButton();
   setupRefreshButton();
+  setupFeedbackButton();
 });
 /*! Bundled license information:
 
