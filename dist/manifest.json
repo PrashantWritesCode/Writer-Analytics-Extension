@@ -2,18 +2,18 @@
   "manifest_version": 3,
   "name": "Writer Analytics Extension",
   "version": "1.0.0",
-  "description": "Collects basic story stats from Wattpad & Webnovel and shows them to authors.",
+  "description": "Visualize your Wattpad story analytics and understand readers better with clear insights.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://www.wattpad.com/*",
     "https://www.webnovel.com/*"
   ],
   "action": {
-    "default_popup": "dist/popup.html",
+    "default_popup": "popup.html",
     "default_title": "Writer Analytics"
   },
   "background": {
-    "service_worker": "dist/background.js",
+    "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
@@ -22,7 +22,7 @@
         "https://www.wattpad.com/*",
         "https://www.webnovel.com/*"
       ],
-      "js": ["dist/content.js"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
