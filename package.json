@@ -1,6 +1,6 @@
 {
   "name": "writer-analytics-extension",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "devDependencies": {
     "@types/chart.js": "^2.9.41",
@@ -15,10 +15,10 @@
   "scripts": {
     "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --platform=browser --format=iife --sourcemap --log-level=info",
     "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --platform=browser --format=esm --sourcemap --log-level=info",
-    "build:popup": "esbuild src/popup.ts --bundle --outfile=dist/popup.js --platform=browser --format=esm --sourcemap --log-level=info",
-    "build:files": "mkdir -p dist && cp ./manifest.json ./dist/manifest.json && cp -R ./assets ./dist/assets && cp ./popup.html ./src/popup.css ./icon.png ./dist/",
+    "build:popup": "esbuild src/popup/popup.ts --bundle --outfile=dist/popup.js --platform=browser --format=esm --sourcemap --log-level=info",
+    "build:files": "mkdir -p dist && cp ./manifest.json ./dist/manifest.json && cp -R ./assets ./dist/assets && cp ./src/popup/popup.html ./src/popup/popup.css ./icon.png ./dist/",
     "build": "rm -rf dist && mkdir -p dist && npm run build:files && npm run build:content && npm run build:background && npm run build:popup",
-    "dev": "npm run build --watch",
+    "dev": "npm run build -- --watch",
     "clean": "rm -rf dist"
   }
 }

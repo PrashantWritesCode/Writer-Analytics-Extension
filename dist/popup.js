@@ -7851,19 +7851,19 @@ var require_html2canvas = __commonJS({
   }
 });
 
-// src/popup.ts
+// src/popup/popup.ts
 var import_html2canvas = __toESM(require_html2canvas());
 function $(id) {
   return document.getElementById(id);
 }
 function formatNumber(num) {
-  if (num === null || num === void 0)
+  if (num == null)
     return "\u2014";
   if (num >= 1e6)
     return (num / 1e6).toFixed(1) + "M";
   if (num >= 1e3)
     return (num / 1e3).toFixed(1) + "K";
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return num.toLocaleString();
 }
 function firstN(text, n = 120) {
   if (!text)
@@ -7883,9 +7883,8 @@ function svgCommentIcon() {
 }
 function getAuthorFromDom() {
   const strongEl = document.querySelector(".author-info .info strong");
-  if (strongEl && strongEl.textContent) {
+  if (strongEl?.textContent)
     return strongEl.textContent.trim();
-  }
   const selectors = [
     ".author-info a.on-navigate",
     ".author.hidden-lg a.on-navigate",
@@ -7893,9 +7892,8 @@ function getAuthorFromDom() {
   ];
   for (const sel of selectors) {
     const el = document.querySelector(sel);
-    if (el && el.textContent) {
+    if (el?.textContent)
       return el.textContent.replace(/^by\s*/i, "").trim();
-    }
   }
   return null;
 }
@@ -7904,8 +7902,14 @@ function renderTopHits(paragraphs = []) {
   if (!topHitsList)
     return;
   topHitsList.innerHTML = "";
-  const sorted = [...paragraphs || []].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const sorted = [...paragraphs].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
   const top = sorted.slice(0, 3);
+  if (top.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No top moments yet.";
+    topHitsList.appendChild(li);
+    return;
+  }
   top.forEach((p, index) => {
     const li = document.createElement("li");
     const left = document.createElement("div");
@@ -7913,12 +7917,7 @@ function renderTopHits(paragraphs = []) {
     const medal = document.createElement("div");
     medal.className = "medal";
     const medalImg = document.createElement("img");
-    if (index === 0)
-      medalImg.src = "assets/gold.png";
-    else if (index === 1)
-      medalImg.src = "assets/silver.png";
-    else
-      medalImg.src = "assets/bronze.png";
+    medalImg.src = index === 0 ? "assets/gold.png" : index === 1 ? "assets/silver.png" : "assets/bronze.png";
     medalImg.alt = `Rank ${index + 1}`;
     medal.appendChild(medalImg);
     const txt = document.createElement("div");
@@ -7934,18 +7933,13 @@ function renderTopHits(paragraphs = []) {
     li.appendChild(badge);
     topHitsList.appendChild(li);
   });
-  if (top.length === 0) {
-    const li = document.createElement("li");
-    li.textContent = "No top moments yet.";
-    topHitsList.appendChild(li);
-  }
 }
 function renderParagraphs(paragraphs = []) {
   const container = $("paragraphsList");
   if (!container)
     return;
   container.innerHTML = "";
-  if (!paragraphs || paragraphs.length === 0) {
+  if (!paragraphs.length) {
     const div = document.createElement("div");
     div.style.padding = "8px";
     div.style.opacity = "0.7";
@@ -7973,29 +7967,16 @@ function renderParagraphs(paragraphs = []) {
     container.appendChild(row);
   });
 }
-function loadCachedLatest() {
+async function loadCachedLatest() {
   return new Promise((resolve) => {
     chrome.storage.local.get(null, (all) => {
       const keys = Object.keys(all).filter((k) => k.startsWith("writerAnalyticsStats-"));
-      if (keys.length === 0) {
-        resolve(null);
-        return;
-      }
-      let chosen = null;
-      for (const k of keys) {
-        const s = all[k];
-        if (!s)
-          continue;
-        if (!chosen) {
-          chosen = s;
-          continue;
-        }
-        if (s.capturedAt && chosen.capturedAt) {
-          if (new Date(s.capturedAt).getTime() > new Date(chosen.capturedAt || 0).getTime())
-            chosen = s;
-        }
-      }
-      resolve(chosen);
+      if (!keys.length)
+        return resolve(null);
+      const latest = keys.map((k) => all[k]).filter(Boolean).sort(
+        (a, b) => new Date(b.capturedAt || 0).getTime() - new Date(a.capturedAt || 0).getTime()
+      )[0];
+      resolve(latest || null);
     });
   });
 }
@@ -8011,30 +7992,15 @@ function displayData(stats) {
   const authorEl = $("author");
   if (titleEl)
     titleEl.textContent = stats.title || "Untitled Story";
-  let authorName = stats.author;
-  if (!authorName || authorName === "Unknown Author") {
-    authorName = getAuthorFromDom();
-  }
+  const authorName = stats.author || getAuthorFromDom() || "Unknown Author";
   if (authorEl)
-    authorEl.textContent = authorName ? `by ${authorName}` : "by Unknown Author";
-  const readsEl = $("reads");
-  const votesEl = $("votes");
-  const headerCommentsEl = $("headerComments");
-  const commentItemsEl = $("commentItemsCount");
-  if (readsEl)
-    readsEl.textContent = formatNumber(stats.reads ?? null);
-  if (votesEl)
-    votesEl.textContent = formatNumber(stats.votes ?? null);
-  if (headerCommentsEl)
-    headerCommentsEl.textContent = formatNumber(stats.headerComments ?? null);
-  if (commentItemsEl)
-    commentItemsEl.textContent = String(stats.commentItemsCount ?? "\u2014");
-  const engagementEl = $("engagementRate");
-  const commentRatioEl = $("commentRatio");
-  if (engagementEl)
-    engagementEl.textContent = stats.reads && stats.votes && stats.reads > 0 ? (stats.votes / stats.reads * 100).toFixed(2) + "%" : "\u2014";
-  if (commentRatioEl)
-    commentRatioEl.textContent = stats.reads && stats.headerComments && stats.reads > 0 ? (stats.headerComments / stats.reads * 100).toFixed(2) + "%" : "\u2014";
+    authorEl.textContent = `by ${authorName}`;
+  $("reads").textContent = formatNumber(stats.reads);
+  $("votes").textContent = formatNumber(stats.votes);
+  $("headerComments").textContent = formatNumber(stats.headerComments);
+  $("commentItemsCount").textContent = String(stats.commentItemsCount ?? "\u2014");
+  $("engagementRate").textContent = stats.reads && stats.votes ? (stats.votes / stats.reads * 100).toFixed(2) + "%" : "\u2014";
+  $("commentRatio").textContent = stats.reads && stats.headerComments ? (stats.headerComments / stats.reads * 100).toFixed(2) + "%" : "\u2014";
   renderTopHits(stats.paragraphComments ?? []);
   renderParagraphs(stats.paragraphComments ?? []);
 }
@@ -8042,21 +8008,14 @@ function refreshData() {
   showStatus("\u{1F504} Refreshing...", true);
   chrome.runtime.sendMessage({ type: "WA_REFRESH" }, (resp) => {
     if (chrome.runtime.lastError) {
-      loadCachedLatest().then((s) => {
-        displayData(s);
-        showStatus("", false);
-      });
+      loadCachedLatest().then(displayData);
       return;
     }
-    if (resp && resp.payload) {
+    if (resp?.payload)
       displayData(resp.payload);
-      showStatus("", false);
-    } else {
-      loadCachedLatest().then((s) => {
-        displayData(s);
-        showStatus("", false);
-      });
-    }
+    else
+      loadCachedLatest().then(displayData);
+    showStatus("", false);
   });
 }
 function setupExportButton() {
@@ -8064,68 +8023,76 @@ function setupExportButton() {
   if (!exportBtn)
     return;
   exportBtn.addEventListener("click", async () => {
-    const exportArea = document.getElementById("export-area");
+    const exportArea = $("export-area");
     if (!exportArea)
       return alert("Nothing to export");
-    try {
-      const canvas = await (0, import_html2canvas.default)(exportArea, {
-        backgroundColor: "#ffffff",
-        // ensure solid white background
-        scale: 2,
-        // increase for sharper output
-        useCORS: true,
-        // fix images/icons if needed
-        width: exportArea.scrollWidth,
-        height: exportArea.scrollHeight
-      });
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = "story-analytics.png";
-      a.click();
-    } catch (err) {
-      console.error("Export error:", err);
-      alert("Export failed \u2014 check console.");
-    }
+    const canvas = await (0, import_html2canvas.default)(exportArea, {
+      backgroundColor: "#fff",
+      scale: 2,
+      useCORS: true
+    });
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = "story-analytics.png";
+    a.click();
   });
 }
-function setupRefreshButton() {
-  const btn = $("refresh-btn");
-  if (!btn)
-    return;
-  btn.addEventListener("click", () => refreshData());
+function showAnalytics() {
+  const home = $("home-screen");
+  const analytics = $("analytics-ui");
+  if (home) {
+    home.style.opacity = "0";
+    setTimeout(() => home.style.display = "none", 150);
+  }
+  if (analytics) {
+    analytics.style.display = "block";
+    setTimeout(() => analytics.style.opacity = "1", 100);
+  }
 }
-function setupAnalyzeButton() {
-  const btn = $("analyze-btn");
+function showHome() {
+  const home = $("home-screen");
+  const analytics = $("analytics-ui");
+  if (analytics) {
+    analytics.style.opacity = "0";
+    setTimeout(() => analytics.style.display = "none", 150);
+  }
+  if (home) {
+    home.style.display = "flex";
+    setTimeout(() => home.style.opacity = "1", 100);
+  }
+}
+function setupStoryAnalyticsButton() {
+  const btn = $("open-analytics");
   if (!btn)
     return;
   btn.addEventListener("click", () => {
-    const analyzeScreen = $("analyze-screen");
-    const analyticsUI = $("analytics-ui");
-    if (analyzeScreen)
-      analyzeScreen.style.display = "none";
-    if (analyticsUI)
-      analyticsUI.style.display = "block";
-    document.body.classList.remove("analyze-mode");
+    showAnalytics();
     refreshData();
   });
 }
-function setupFeedbackButton() {
-  const btn = $("feedback-btn");
-  if (!btn)
+function setupBackButton() {
+  const backBtn = $("back-to-home");
+  if (!backBtn)
     return;
-  btn.addEventListener("click", () => {
-    chrome.tabs.create({
-      url: "https://forms.gle/JEBaepXGLnaufZPn9"
-      // 🔗 replace with your Google Form link
-    });
+  backBtn.addEventListener("click", showHome);
+}
+function setupFeedbackButton() {
+  const openForm = () => chrome.tabs.create({ url: "https://forms.gle/JEBaepXGLnaufZPn9" });
+  ["feedback-btn", "feedback-btn-bottom", "feedback-btn-home"].forEach((id) => {
+    const el = $(id);
+    if (el)
+      el.addEventListener("click", openForm);
   });
 }
 document.addEventListener("DOMContentLoaded", () => {
-  document.body.classList.add("analyze-mode");
-  setupAnalyzeButton();
+  showHome();
+  setupStoryAnalyticsButton();
   setupExportButton();
-  setupRefreshButton();
   setupFeedbackButton();
+  setupBackButton();
+  const refreshBtn = $("refresh-btn");
+  if (refreshBtn)
+    refreshBtn.addEventListener("click", refreshData);
 });
 /*! Bundled license information:
 
