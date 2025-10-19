@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Writer Analytics Extension",
-  "version": "1.0.0",
-  "description": "Visualize your Wattpad story analytics and understand readers better with clear insights.",
+  "name": "Writer Analytics",
+  "short_name": "Writer Analytics",
+  "version": "1.2.0",
+  "description": "Gain insights into your writing performance with detailed story analytics, engagement tracking, and creative tools — all processed locally.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://www.wattpad.com/*",
@@ -39,5 +40,8 @@
         "https://www.webnovel.com/*"
       ]
     }
-  ]
+  ],
+  "offline_enabled": true,
+  "keywords": ["writing", "analytics", "stories", "Wattpad", "creators", "fiction", "insights"],
+  "coming_features": ["StoryTeller", "StoryPlot AI"]
 }

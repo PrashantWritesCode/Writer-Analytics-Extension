@@ -147,9 +147,10 @@ body {
   color: var(--muted);
 }
 
-/* Text alignment fix (responsive) */
+/* Text alignment fix (responsive) — uses rem for responsiveness */
 .feature-card .text {
   margin-left: 2.5rem;
+  /* ≈ 40px when 1rem = 16px; responsive with root font-size */
 }
 
 /* Privacy Note */
@@ -210,6 +211,48 @@ body {
 
 .modern-footer-btn:hover .footer-icon {
   opacity: 1;
+}
+
+/* =====================================================
+   EMPTY STATE (New)
+   ===================================================== */
+.empty-state {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100%;
+  text-align: center;
+  padding: 24px;
+}
+
+.empty-card {
+  background: linear-gradient(145deg, #f8fffd, #ffffff);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(12, 14, 18, 0.05);
+  padding: 32px 20px;
+  max-width: 500px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.empty-emoji {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  font-weight: 700;
+  font-size: 18px;
+  color: #111827;
+  margin: 0;
+}
+
+.empty-subtext {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 10px 0 18px;
+  line-height: 1.5;
 }
 
 /* =====================================================
@@ -450,17 +493,26 @@ body {
   box-shadow: 0 2px 6px rgba(12, 14, 18, 0.03);
 }
 
+/* Paragraph item spacing & font tweaks:
+   - Add a small margin-bottom to create space between rows
+   - Keep border for subtle separation (user wanted "MVP-like" spacing)
+*/
 .para {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px;
   border-bottom: 1px solid #f3f6f7;
-  font-size: 13px;
+  font-size: 14px;
+  /* slightly larger for readability */
+  margin-bottom: 8px;
+  /* creates breathing room between items */
+  background-clip: padding-box;
 }
 
 .para:last-child {
   border-bottom: none;
+  margin-bottom: 0;
 }
 
 .para-left {

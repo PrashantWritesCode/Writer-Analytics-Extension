@@ -7902,7 +7902,9 @@ function renderTopHits(paragraphs = []) {
   if (!topHitsList)
     return;
   topHitsList.innerHTML = "";
-  const sorted = [...paragraphs].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const sorted = [...paragraphs].sort(
+    (a, b) => (b.count ?? 0) - (a.count ?? 0)
+  );
   const top = sorted.slice(0, 3);
   if (top.length === 0) {
     const li = document.createElement("li");
@@ -7970,7 +7972,9 @@ function renderParagraphs(paragraphs = []) {
 async function loadCachedLatest() {
   return new Promise((resolve) => {
     chrome.storage.local.get(null, (all) => {
-      const keys = Object.keys(all).filter((k) => k.startsWith("writerAnalyticsStats-"));
+      const keys = Object.keys(all).filter(
+        (k) => k.startsWith("writerAnalyticsStats-")
+      );
       if (!keys.length)
         return resolve(null);
       const latest = keys.map((k) => all[k]).filter(Boolean).sort(
@@ -7980,13 +7984,57 @@ async function loadCachedLatest() {
     });
   });
 }
+function showEmptyState() {
+  const empty = $("empty-state");
+  const analytics = $("analytics-ui");
+  const home = $("home-screen");
+  if (analytics)
+    analytics.style.display = "none";
+  if (home)
+    home.style.display = "none";
+  if (empty) {
+    empty.style.display = "flex";
+    empty.style.opacity = "1";
+  }
+}
+function hideEmptyState() {
+  const empty = $("empty-state");
+  if (empty)
+    empty.style.display = "none";
+}
+var SAMPLE_STORY = {
+  title: "The Light Beyond Shadows",
+  author: "Ava Winters",
+  reads: 12800,
+  votes: 3200,
+  headerComments: 480,
+  commentItemsCount: 42,
+  paragraphComments: [
+    {
+      pId: 1,
+      count: 16,
+      snippet: "The night whispered secrets only she could hear."
+    },
+    {
+      pId: 2,
+      count: 12,
+      snippet: "His eyes met hers \u2014 and time ceased to exist."
+    },
+    {
+      pId: 3,
+      count: 9,
+      snippet: "Rain kissed the window like a promise unfulfilled."
+    }
+  ],
+  capturedAt: (/* @__PURE__ */ new Date()).toISOString()
+};
 function displayData(stats) {
   if (!stats) {
-    showStatus("No data found. Visit a Wattpad story and refresh.", true);
-    renderTopHits([]);
-    renderParagraphs([]);
+    showEmptyState();
+    showStatus("No story loaded.", true);
     return;
   }
+  hideEmptyState();
   showStatus("", false);
   const titleEl = $("title");
   const authorEl = $("author");
@@ -8040,25 +8088,27 @@ function setupExportButton() {
 function showAnalytics() {
   const home = $("home-screen");
   const analytics = $("analytics-ui");
-  if (home) {
-    home.style.opacity = "0";
-    setTimeout(() => home.style.display = "none", 150);
-  }
+  const empty = $("empty-state");
+  if (home)
+    home.style.display = "none";
+  if (empty)
+    empty.style.display = "none";
   if (analytics) {
     analytics.style.display = "block";
-    setTimeout(() => analytics.style.opacity = "1", 100);
+    analytics.style.opacity = "1";
   }
 }
 function showHome() {
   const home = $("home-screen");
   const analytics = $("analytics-ui");
-  if (analytics) {
-    analytics.style.opacity = "0";
-    setTimeout(() => analytics.style.display = "none", 150);
-  }
+  const empty = $("empty-state");
+  if (analytics)
+    analytics.style.display = "none";
+  if (empty)
+    empty.style.display = "none";
   if (home) {
     home.style.display = "flex";
-    setTimeout(() => home.style.opacity = "1", 100);
+    home.style.opacity = "1";
   }
 }
 function setupStoryAnalyticsButton() {
@@ -8084,12 +8134,22 @@ function setupFeedbackButton() {
       el.addEventListener("click", openForm);
   });
 }
+function setupSampleStoryButton() {
+  const btn = $("sample-btn");
+  if (!btn)
+    return;
+  btn.addEventListener("click", () => {
+    showAnalytics();
+    displayData(SAMPLE_STORY);
+  });
+}
 document.addEventListener("DOMContentLoaded", () => {
   showHome();
   setupStoryAnalyticsButton();
   setupExportButton();
   setupFeedbackButton();
   setupBackButton();
+  setupSampleStoryButton();
   const refreshBtn = $("refresh-btn");
   if (refreshBtn)
     refreshBtn.addEventListener("click", refreshData);

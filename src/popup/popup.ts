@@ -79,7 +79,9 @@ function renderTopHits(paragraphs: ParagraphComment[] = []): void {
   if (!topHitsList) return;
   topHitsList.innerHTML = "";
 
-  const sorted = [...paragraphs].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  const sorted = [...paragraphs].sort(
+    (a, b) => (b.count ?? 0) - (a.count ?? 0)
+  );
   const top = sorted.slice(0, 3);
 
   if (top.length === 0) {
@@ -117,7 +119,9 @@ function renderTopHits(paragraphs: ParagraphComment[] = []): void {
     const badge = document.createElement("div");
     badge.className = "comment-badge";
     const countNum = p.count ?? 0;
-    badge.innerHTML = `${svgCommentIcon()} ${countNum} comment${countNum === 1 ? "" : "s"}`;
+    badge.innerHTML = `${svgCommentIcon()} ${countNum} comment${
+      countNum === 1 ? "" : "s"
+    }`;
 
     li.appendChild(left);
     li.appendChild(badge);
@@ -153,7 +157,9 @@ function renderParagraphs(paragraphs: ParagraphComment[] = []): void {
     const badge = document.createElement("div");
     badge.className = "comment-badge";
     const cnt = p.count ?? 0;
-    badge.innerHTML = `${svgCommentIcon()} ${cnt} comment${cnt === 1 ? "" : "s"}`;
+    badge.innerHTML = `${svgCommentIcon()} ${cnt} comment${
+      cnt === 1 ? "" : "s"
+    }`;
 
     rightWrap.appendChild(badge);
     row.appendChild(left);
@@ -170,7 +176,9 @@ function renderParagraphs(paragraphs: ParagraphComment[] = []): void {
 async function loadCachedLatest(): Promise<StoryStats | null> {
   return new Promise((resolve) => {
     chrome.storage.local.get(null, (all) => {
-      const keys = Object.keys(all).filter((k) => k.startsWith("writerAnalyticsStats-"));
+      const keys = Object.keys(all).filter((k) =>
+        k.startsWith("writerAnalyticsStats-")
+      );
       if (!keys.length) return resolve(null);
 
       const latest = keys
@@ -178,21 +186,74 @@ async function loadCachedLatest(): Promise<StoryStats | null> {
         .filter(Boolean)
         .sort(
           (a, b) =>
-            new Date(b.capturedAt || 0).getTime() - new Date(a.capturedAt || 0).getTime()
+            new Date(b.capturedAt || 0).getTime() -
+            new Date(a.capturedAt || 0).getTime()
         )[0];
       resolve(latest || null);
     });
   });
 }
 
+/* ---------------------------------------------
+   Empty / Sample State
+--------------------------------------------- */
+function showEmptyState(): void {
+  const empty = $("empty-state");
+  const analytics = $("analytics-ui");
+  const home = $("home-screen");
+
+  if (analytics) analytics.style.display = "none";
+  if (home) home.style.display = "none";
+  if (empty) {
+    empty.style.display = "flex";
+    empty.style.opacity = "1";
+  }
+}
+
+function hideEmptyState(): void {
+  const empty = $("empty-state");
+  if (empty) empty.style.display = "none";
+}
+
+/* Sample demo data for preview */
+const SAMPLE_STORY: StoryStats = {
+  title: "The Light Beyond Shadows",
+  author: "Ava Winters",
+  reads: 12800,
+  votes: 3200,
+  headerComments: 480,
+  commentItemsCount: 42,
+  paragraphComments: [
+    {
+      pId: 1,
+      count: 16,
+      snippet: "The night whispered secrets only she could hear.",
+    },
+    {
+      pId: 2,
+      count: 12,
+      snippet: "His eyes met hers — and time ceased to exist.",
+    },
+    {
+      pId: 3,
+      count: 9,
+      snippet: "Rain kissed the window like a promise unfulfilled.",
+    },
+  ],
+  capturedAt: new Date().toISOString(),
+};
+
+/* ---------------------------------------------
+   Data Rendering
+--------------------------------------------- */
 function displayData(stats: StoryStats | null): void {
   if (!stats) {
-    showStatus("No data found. Visit a Wattpad story and refresh.", true);
-    renderTopHits([]);
-    renderParagraphs([]);
+    showEmptyState();
+    showStatus("No story loaded.", true);
     return;
   }
 
+  hideEmptyState();
   showStatus("", false);
 
   const titleEl = $("title");
@@ -263,30 +324,28 @@ function setupExportButton(): void {
 function showAnalytics(): void {
   const home = $("home-screen");
   const analytics = $("analytics-ui");
+  const empty = $("empty-state");
 
-  if (home) {
-    home.style.opacity = "0";
-    setTimeout(() => (home.style.display = "none"), 150);
-  }
+  if (home) home.style.display = "none";
+  if (empty) empty.style.display = "none";
 
   if (analytics) {
     analytics.style.display = "block";
-    setTimeout(() => (analytics.style.opacity = "1"), 100);
+    analytics.style.opacity = "1";
   }
 }
 
 function showHome(): void {
   const home = $("home-screen");
   const analytics = $("analytics-ui");
+  const empty = $("empty-state");
 
-  if (analytics) {
-    analytics.style.opacity = "0";
-    setTimeout(() => (analytics.style.display = "none"), 150);
-  }
+  if (analytics) analytics.style.display = "none";
+  if (empty) empty.style.display = "none";
 
   if (home) {
     home.style.display = "flex";
-    setTimeout(() => (home.style.opacity = "1"), 100);
+    home.style.opacity = "1";
   }
 }
 
@@ -319,6 +378,18 @@ function setupFeedbackButton(): void {
 }
 
 /* ---------------------------------------------
+   Sample Story Button (New)
+--------------------------------------------- */
+function setupSampleStoryButton(): void {
+  const btn = $("sample-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    showAnalytics();
+    displayData(SAMPLE_STORY);
+  });
+}
+
+/* ---------------------------------------------
    Initialization
 --------------------------------------------- */
 document.addEventListener("DOMContentLoaded", () => {
@@ -327,6 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupExportButton();
   setupFeedbackButton();
   setupBackButton();
+  setupSampleStoryButton();
 
   const refreshBtn = $("refresh-btn");
   if (refreshBtn) refreshBtn.addEventListener("click", refreshData);
