@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=650, initial-scale=1.0" /> <!-- ✅ slightly wider viewport -->
-  <title>Story Studio</title>
+  <meta name="viewport" content="width=650, initial-scale=1.0" />
+  <title>Writer Analytics</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 
@@ -16,12 +16,14 @@
 
       <!-- Header Section -->
       <header class="home-header">
-        <h1 class="home-title">✨ Welcome to Story Studio</h1>
+        <h1 class="home-title">✨ Welcome to Writer Analytics</h1>
         <p class="home-subtitle">Your creative companion for stories.</p>
       </header>
 
       <!-- Feature Section -->
       <section class="feature-list">
+
+        <!-- ✅ Story Analytics (Active) -->
         <button id="open-analytics" class="feature-card teal">
           <div class="icon">📊</div>
           <div class="text">
@@ -30,26 +32,35 @@
           </div>
         </button>
 
-        <button id="open-storyteller" class="feature-card blue">
+        <!-- 🎧 StoryTeller (Coming Soon) -->
+        <div class="feature-card blue coming-soon">
           <div class="icon">🎧</div>
           <div class="text">
-            <div class="title">StoryTeller</div>
+            <div class="title">
+              StoryTeller
+              <span class="soon-badge">Coming Soon</span>
+            </div>
             <div class="desc">Hear your story come alive.</div>
           </div>
-        </button>
+        </div>
 
-        <button id="open-storyplot" class="feature-card purple">
+        <!-- 🎨 StoryPlot AI (Coming Soon) -->
+        <div class="feature-card purple coming-soon">
           <div class="icon">🎨</div>
           <div class="text">
-            <div class="title">StoryPlot AI</div>
+            <div class="title">
+              StoryPlot AI
+              <span class="soon-badge">Coming Soon</span>
+            </div>
             <div class="desc">Visualize your characters.</div>
           </div>
-        </button>
+        </div>
+
       </section>
 
       <!-- Privacy Section -->
       <section class="privacy-note">
-        🔒 Your data stays local — Story Studio never uploads or stores your story content.
+        🔒 Your data stays local — Writer Analytics never uploads or stores your story content.
       </section>
 
       <!-- Footer -->
