@@ -2,7 +2,6 @@
 
 :root {
   --bg: #ffffff;
-  /* ✅ fully white for edge-blended popup */
   --surface: #ffffff;
   --text: #1a202c;
   --muted: #6b7280;
@@ -17,17 +16,14 @@
 }
 
 /* =====================================================
-   POPUP SHELL (Balanced height, no outer scroll)
+   POPUP SHELL
    ===================================================== */
 html,
 body {
   width: 650px !important;
-  /* ✅ increased width for analytics view */
   min-width: 650px !important;
   height: 600px !important;
-  /* ✅ reduced height to remove scrollbar */
   min-height: 600px !important;
-  /* ✅ match actual height */
   margin: 0;
   padding: 0;
   font-family: var(--font);
@@ -40,11 +36,10 @@ body {
   box-shadow: var(--shadow);
   box-sizing: border-box;
   overflow: hidden;
-  /* ✅ prevents root scroll */
 }
 
 /* =====================================================
-   HOME PAGE — Edge-Blended (no inner popup effect)
+   HOME PAGE — Edge-Blended
    ===================================================== */
 .home {
   flex: 1;
@@ -61,7 +56,6 @@ body {
 .home-card {
   width: 100%;
   height: 100%;
-  /* ✅ fills popup completely */
   max-width: 100%;
   background: var(--surface);
   border-radius: 0;
@@ -97,7 +91,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* width: 100%; */
   width: 70%;
 }
 
@@ -154,9 +147,9 @@ body {
   color: var(--muted);
 }
 
-/* Align text properly inside feature cards (responsive) */
+/* Text alignment fix (responsive) */
 .feature-card .text {
-  margin-left: 2.5rem; /* ≈ 40px assuming 1rem = 16px */
+  margin-left: 2.5rem;
 }
 
 /* Privacy Note */
@@ -173,31 +166,54 @@ body {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-/* Footer */
+/* =====================================================
+   MODERN FOOTER (Updated)
+   ===================================================== */
 .footer-row {
   display: flex;
   justify-content: center;
-  gap: 22px;
-  margin-top: 16px;
-  padding-top: 10px;
+  align-items: center;
+  gap: 28px;
+  margin-top: 20px;
+  padding-top: 14px;
   border-top: 1px solid #f3f6f7;
 }
 
-.footer-btn {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 13px;
+/* Modern Footer Buttons */
+.modern-footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  color: #374151;
+  background: #f9fafb;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
   cursor: pointer;
-  transition: color 0.25s ease;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 
-.footer-btn:hover {
-  color: var(--text);
+.modern-footer-btn:hover {
+  background: linear-gradient(135deg, #f3f4f6, #ffffff);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.06);
+  color: #111827;
+  transform: translateY(-1px);
+}
+
+.footer-icon {
+  font-size: 15px;
+  opacity: 0.8;
+  transition: opacity 0.25s ease;
+}
+
+.modern-footer-btn:hover .footer-icon {
+  opacity: 1;
 }
 
 /* =====================================================
-   ANALYTICS SECTION (Updated for unified width)
+   ANALYTICS SECTION
    ===================================================== */
 #analytics-ui {
   display: none;
@@ -276,7 +292,6 @@ body {
   padding: 18px 20px;
   width: 100%;
   max-width: 610px;
-  /* ✅ unified with new popup width */
   margin: 0 auto 16px;
   box-shadow: 0 8px 24px rgba(12, 14, 18, 0.06);
   box-sizing: border-box;
@@ -431,7 +446,6 @@ body {
   overflow-x: hidden;
   width: 100%;
   max-width: 610px;
-  /* ✅ same width as export area */
   margin: 0 auto;
   box-shadow: 0 2px 6px rgba(12, 14, 18, 0.03);
 }
@@ -520,19 +534,19 @@ body {
   margin-bottom: 8px;
 }
 
-/* Coming Soon Features */
+/* Coming Soon */
 .coming-soon {
   opacity: 0.75;
   cursor: not-allowed;
   position: relative;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
+
 .coming-soon:hover {
-  transform: none; /* prevent hover lift */
+  transform: none;
   opacity: 0.8;
 }
 
-/* Coming Soon Badge */
 .soon-badge {
   font-size: 11.5px;
   font-weight: 600;
