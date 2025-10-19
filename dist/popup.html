@@ -2,26 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=640, initial-scale=1.0" />
+  <meta name="viewport" content="width=650, initial-scale=1.0" /> <!-- ✅ slightly wider viewport -->
   <title>Story Studio</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 
 <body>
   <!-- ===========================
-       🌟 Home Screen (Story Studio)
+       🌟 HOME SCREEN — Edge-Blended
   ============================ -->
   <div id="home-screen" class="home">
     <div class="home-card">
-      
+
       <!-- Header Section -->
-      <div class="home-header">
+      <header class="home-header">
         <h1 class="home-title">✨ Welcome to Story Studio</h1>
         <p class="home-subtitle">Your creative companion for stories.</p>
-      </div>
+      </header>
 
       <!-- Feature Section -->
-      <div class="feature-list">
+      <section class="feature-list">
         <button id="open-analytics" class="feature-card teal">
           <div class="icon">📊</div>
           <div class="text">
@@ -45,26 +45,26 @@
             <div class="desc">Visualize your characters.</div>
           </div>
         </button>
-      </div>
+      </section>
 
       <!-- Privacy Section -->
-      <div class="privacy-note">
+      <section class="privacy-note">
         🔒 Your data stays local — Story Studio never uploads or stores your story content.
-      </div>
+      </section>
 
       <!-- Footer -->
-      <div class="footer-row">
+      <footer class="footer-row">
         <button id="settings-btn" class="footer-btn">⚙️ Settings</button>
         <button id="feedback-btn-home" class="footer-btn">💬 Feedback</button>
-      </div>
+      </footer>
 
     </div>
   </div>
 
   <!-- ===========================
-       📊 Analytics Dashboard
+       📊 ANALYTICS DASHBOARD
   ============================ -->
-  <div id="analytics-ui" style="display:none;">
+  <div id="analytics-ui" style="display: none;">
     <div class="analytics-header">
       <button id="back-to-home" class="back-btn">← Back</button>
       <h2 class="analytics-title">📊 Story Analytics</h2>
@@ -79,12 +79,30 @@
       </div>
 
       <section class="stats-grid">
-        <div class="stat-card"><div class="stat-number" id="reads">—</div><div class="stat-label">Reads</div></div>
-        <div class="stat-card"><div class="stat-number" id="votes">—</div><div class="stat-label">Votes</div></div>
-        <div class="stat-card"><div class="stat-number" id="headerComments">—</div><div class="stat-label">Comments</div></div>
-        <div class="stat-card"><div class="stat-number" id="commentItemsCount">—</div><div class="stat-label">Paragraphs</div></div>
-        <div class="stat-card"><div class="stat-number" id="engagementRate">—</div><div class="stat-label">Engagement Rate</div></div>
-        <div class="stat-card"><div class="stat-number" id="commentRatio">—</div><div class="stat-label">Comment Ratio</div></div>
+        <div class="stat-card">
+          <div class="stat-number" id="reads">—</div>
+          <div class="stat-label">Reads</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="votes">—</div>
+          <div class="stat-label">Votes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="headerComments">—</div>
+          <div class="stat-label">Comments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="commentItemsCount">—</div>
+          <div class="stat-label">Paragraphs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="engagementRate">—</div>
+          <div class="stat-label">Engagement Rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="commentRatio">—</div>
+          <div class="stat-label">Comment Ratio</div>
+        </div>
       </section>
 
       <div class="section-title">✨ Top Moments</div>

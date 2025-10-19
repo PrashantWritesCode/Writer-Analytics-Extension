@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #f9fafb;
+  --bg: #ffffff; /* ✅ fully white for edge-blended popup */
   --surface: #ffffff;
   --text: #1a202c;
   --muted: #6b7280;
@@ -15,12 +15,14 @@
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* ===== POPUP SHELL ===== */
+/* =====================================================
+   POPUP SHELL (Balanced height, no outer scroll)
+   ===================================================== */
 html, body {
-  width: 580px !important;
-  min-width: 580px !important;
-  height: 760px !important;
-  min-height: 760px !important;
+  width: 650px !important;       /* ✅ increased width for analytics view */
+  min-width: 650px !important;
+  height: 600px !important;      /* ✅ reduced height to remove scrollbar */
+  min-height: 600px !important;  /* ✅ match actual height */
   margin: 0;
   padding: 0;
   font-family: var(--font);
@@ -32,56 +34,45 @@ html, body {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   box-sizing: border-box;
-  overflow: hidden; /* ✅ removes root-level scrollbars */
+  overflow: hidden;              /* ✅ prevents root scroll */
 }
 
-/* ======================================================
-   HOME PAGE — dynamic content height + perfect centering
-   ====================================================== */
-/* ===== HOME PAGE (Final Fix — No Scroll, No Gaps) ===== */
+/* =====================================================
+   HOME PAGE — Edge-Blended (no inner popup effect)
+   ===================================================== */
 .home {
-  display: flex;
   flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg);
-  min-height: 100%;
-  max-height: 100%;
-  overflow: hidden; /* ✅ kills scrollbar */
+  overflow: hidden;
   box-sizing: border-box;
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
 
 .home-card {
   width: 100%;
-  max-width: 540px;
+  height: 100%; /* ✅ fills popup completely */
+  max-width: 100%;
   background: var(--surface);
-  border-radius: 18px;
-  padding: 40px 28px;
-  box-shadow: 0 12px 34px rgba(12, 14, 18, 0.05);
+  border-radius: 0;
+  padding: 36px 26px;
+  box-shadow: none;
   text-align: center;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* ✅ perfect vertical centering */
+  justify-content: center;
   align-items: center;
   gap: 18px;
   box-sizing: border-box;
   animation: fadeIn 0.3s ease-in-out;
-  overflow: hidden; /* ✅ ensures shadows don't push content */
 }
 
 /* Header */
-.home-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-top: 10px;
-}
-
 .home-title {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 800;
   margin: 0;
   color: var(--text);
@@ -90,7 +81,7 @@ html, body {
 .home-subtitle {
   font-size: 15px;
   color: var(--muted);
-  margin: 8px 0 24px;
+  margin: 8px 0 22px;
   line-height: 1.6;
 }
 
@@ -98,11 +89,11 @@ html, body {
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
-  margin-top: 8px;
 }
 
+/* Feature Cards */
 .feature-card {
   display: flex;
   align-items: center;
@@ -140,12 +131,12 @@ html, body {
 .privacy-note {
   font-size: 13px;
   color: var(--muted);
-  padding: 12px 10px;
+  padding: 10px;
   border-top: 1px dashed #e5e7eb;
   line-height: 1.6;
   text-align: center;
-  background: #f1f5f9;
-  border-radius: 10px;
+  background: #f8fafc;
+  border-radius: 8px;
   margin-top: 12px;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
 }
@@ -154,30 +145,29 @@ html, body {
 .footer-row {
   display: flex;
   justify-content: center;
-  gap: 24px;
-  padding-top: 12px;
-  border-top: 1px solid #f3f6f7;
+  gap: 22px;
   margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #f3f6f7;
 }
-
 .footer-btn {
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: 13px;
   cursor: pointer;
   transition: color 0.25s ease;
 }
 .footer-btn:hover { color: var(--text); }
 
-/* ======================================================
-   ANALYTICS (Unchanged)
-   ====================================================== */
+/* =====================================================
+   ANALYTICS SECTION (Updated for unified width)
+   ===================================================== */
 #analytics-ui {
   display: none;
   flex: 1;
   padding: 20px 18px 24px;
-  background: var(--bg);
+  background: #f9fafb;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -237,9 +227,9 @@ html, body {
 #export-area {
   background: var(--surface);
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px 20px;
   width: 100%;
-  max-width: 540px;
+  max-width: 610px; /* ✅ unified with new popup width */
   margin: 0 auto 16px;
   box-shadow: 0 8px 24px rgba(12, 14, 18, 0.06);
   box-sizing: border-box;
@@ -338,11 +328,14 @@ html, body {
 .paragraphs-list {
   background: #fff;
   border-radius: 10px;
-  padding: 8px;
+  padding: 10px 12px;
   border: 1px solid #eef2f5;
   max-height: 240px;
   overflow-y: auto;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 610px; /* ✅ same width as export area */
+  margin: 0 auto;
   box-shadow: 0 2px 6px rgba(12, 14, 18, 0.03);
 }
 .para {
