@@ -9,7 +9,7 @@
     "esbuild": "^0.18.0"
   },
   "dependencies": {
-    "archiver": "^7.0.1",
+    "archiver": "^6.0.2",
     "chart.js": "^4.5.0",
     "fs-extra": "^11.3.2",
     "html2canvas": "^1.4.1"
