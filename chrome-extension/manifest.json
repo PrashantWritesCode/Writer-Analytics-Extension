@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Writer Analytics",
+  "short_name": "Writer Analytics",
+  "version": "1.2.0",
+  "description": "Gain insights into your writing performance with detailed story analytics, engagement tracking, and creative tools — all processed locally.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://www.wattpad.com/*",
+    "https://www.webnovel.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Writer Analytics"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.wattpad.com/*",
+        "https://www.webnovel.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*.png"],
+      "matches": [
+        "https://www.wattpad.com/*",
+        "https://www.webnovel.com/*"
+      ]
+    }
+  ],
+  "offline_enabled": true,
+  "keywords": ["writing", "analytics", "stories", "Wattpad", "creators", "fiction", "insights"],
+  "coming_features": ["StoryTeller", "StoryPlot AI"]
+}

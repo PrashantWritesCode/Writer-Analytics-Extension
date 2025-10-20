@@ -9,10 +9,13 @@
     "esbuild": "^0.18.0"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "chart.js": "^4.5.0",
+    "fs-extra": "^11.3.2",
     "html2canvas": "^1.4.1"
   },
   "scripts": {
+    "build:chrome": "node build-extension.js",
     "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --platform=browser --format=iife --sourcemap --log-level=info",
     "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --platform=browser --format=esm --sourcemap --log-level=info",
     "build:popup": "esbuild src/popup/popup.ts --bundle --outfile=dist/popup.js --platform=browser --format=esm --sourcemap --log-level=info",
