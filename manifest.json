@@ -3,7 +3,7 @@
   "name": "Writer Analytics",
   "short_name": "Writer Analytics",
   "version": "1.2.1",
-  "description": "Writer Analytics turns your story stats into simple, visual insights",
+  "description": "Collects basic story stats from Wattpad & Webnovel and shows them to authors.",
   
   "icons": {
     "16": "icon.png",

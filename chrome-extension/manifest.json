@@ -2,21 +2,36 @@
   "manifest_version": 3,
   "name": "Writer Analytics",
   "short_name": "Writer Analytics",
-  "version": "1.2.0",
-  "description": "Gain insights into your writing performance with detailed story analytics, engagement tracking, and creative tools — all processed locally.",
-  "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": [
-    "https://www.wattpad.com/*",
-    "https://www.webnovel.com/*"
-  ],
+  "version": "1.2.1",
+  "description": "Collects basic story stats from Wattpad & Webnovel and shows them to authors.",
+  
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+
   "action": {
     "default_popup": "popup.html",
     "default_title": "Writer Analytics"
   },
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+
+  "host_permissions": [
+    "https://www.wattpad.com/*",
+    "https://www.webnovel.com/*"
+  ],
+
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
+
   "content_scripts": [
     {
       "matches": [
@@ -27,11 +42,7 @@
       "run_at": "document_idle"
     }
   ],
-  "icons": {
-    "16": "icon.png",
-    "48": "icon.png",
-    "128": "icon.png"
-  },
+
   "web_accessible_resources": [
     {
       "resources": ["assets/*.png"],
@@ -41,7 +52,24 @@
       ]
     }
   ],
+
   "offline_enabled": true,
-  "keywords": ["writing", "analytics", "stories", "Wattpad", "creators", "fiction", "insights"],
-  "coming_features": ["StoryTeller", "StoryPlot AI"]
+  "minimum_chrome_version": "110",
+  "keywords": [
+    "writing",
+    "analytics",
+    "stories",
+    "Wattpad",
+    "creators",
+    "fiction",
+    "insights",
+    "AI writing",
+    "StoryTeller",
+    "StoryPlot"
+  ],
+
+  "coming_features": [
+    "StoryTeller — turn your stories into immersive narration",
+    "StoryPlot AI — visualize characters and plotlines intelligently"
+  ]
 }
