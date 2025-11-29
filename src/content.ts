@@ -1,3 +1,17 @@
+// Copilot, insert at the top:
+
+/*
+IMPORTANT:
+- Do NOT modify this file.
+- This is the stable Story Analytics scraper.
+- New scrapers must be added in src/chapter-analytics/content/.
+*/
+
+// Only add the comment.
+// Do not change any functional code.
+
+
+
 // src/content.ts
 type ParagraphComment = {
   pId: string;

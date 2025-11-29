@@ -1,3 +1,11 @@
+// Copilot, add a header comment:
+
+// - Do NOT modify Story Analytics message handlers (WA_*).
+// - All new CHAPTER_* messages must be implemented in src/chapter-analytics/background/chapterHandler.ts.
+// - background.ts only dispatches to feature handlers.
+
+// Do not change any existing logic.
+// Only add the comment.
 
 
 console.log("[background] starting");

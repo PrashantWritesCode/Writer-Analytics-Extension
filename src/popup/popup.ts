@@ -1,3 +1,13 @@
+// Copilot, add a file header comment explaining:
+
+// - This file handles ONLY navigation.
+// - Do NOT write business logic here.
+// - All new feature logic must go inside src/chapter-analytics/popup/.
+// - Story Analytics code must NOT be modified.
+
+// Do not add any code changes besides the comment.
+
+
 import html2canvas from "html2canvas";
 
 /* ---------------------------------------------

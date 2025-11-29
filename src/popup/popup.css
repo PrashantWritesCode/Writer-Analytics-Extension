@@ -1,3 +1,16 @@
+/* Copilot, append a comment: */
+
+/*
+CSS RULE:
+- All new feature styles must use their own namespace.
+- For Chapter Analytics, every class must start with .chapter-
+- Do NOT modify existing styles.
+*/
+
+/* No CSS rules yet, only the comment. */
+
+
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
