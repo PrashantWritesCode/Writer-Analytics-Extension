@@ -143,8 +143,11 @@
         console.warn("[content] storage set failed", err);
       }
       try {
-        chrome.runtime.sendMessage({ type: "WA_STATS", payload: stats }, () => {
-        });
+        chrome.runtime.sendMessage(
+          { type: "WA_STATS", payload: stats },
+          () => {
+          }
+        );
       } catch (e) {
       }
       return stats;
@@ -187,8 +190,11 @@
         capturedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
       try {
-        chrome.runtime.sendMessage({ type: "WA_STATS", payload: sample }, () => {
-        });
+        chrome.runtime.sendMessage(
+          { type: "WA_STATS", payload: sample },
+          () => {
+          }
+        );
       } catch {
       }
     }
@@ -206,6 +212,30 @@
       sendResponse({ success: !!s, payload: s || null });
       return true;
     }
+    if (message.type === "SCRAPE_CHAPTER_STATS") {
+      (async () => {
+        try {
+          await waitForChapterStats();
+          const stats = extractChapterStatsOnly();
+          const { storyId, chapterId } = message;
+          const storageKey = `temp_chapter_stats_${storyId}_${chapterId}`;
+          await chrome.storage.local.set({
+            [storageKey]: {
+              reads: stats.reads,
+              votes: stats.votes,
+              comments: stats.comments,
+              capturedAt: (/* @__PURE__ */ new Date()).toISOString()
+            }
+          });
+          console.log(`\u2705 Data saved to storage: ${storageKey}`);
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error("[ChapterAnalytics] Scrape failed:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      return true;
+    }
   });
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
@@ -219,5 +249,81 @@
       init();
     }
   }, 1200);
+  function extractChapterStatsOnly() {
+    const readsSelectors = [
+      '[data-testid="story-stats"] span:first-child',
+      ".reads-count",
+      ".story-stats .reads",
+      ".stats .reads"
+    ];
+    let reads = null;
+    for (const s of readsSelectors) {
+      const el = document.querySelector(s);
+      if (el && el.textContent?.trim()) {
+        reads = parseNumber(el.textContent.trim());
+        break;
+      }
+    }
+    const votesSelectors = [
+      '[data-testid="story-votes"] span',
+      ".votes-count",
+      ".story-stats .votes",
+      ".stats .votes"
+    ];
+    let votes = null;
+    for (const s of votesSelectors) {
+      const el = document.querySelector(s);
+      if (el && el.textContent?.trim()) {
+        votes = parseNumber(el.textContent.trim());
+        break;
+      }
+    }
+    const commentsSelectors = [
+      '[data-testid="story-comments"] span',
+      ".comments-count",
+      ".story-stats .comments",
+      ".stats .comments"
+    ];
+    let comments = null;
+    for (const s of commentsSelectors) {
+      const el = document.querySelector(s);
+      if (el && el.textContent?.trim()) {
+        comments = parseNumber(el.textContent.trim());
+        break;
+      }
+    }
+    return {
+      reads,
+      votes,
+      comments
+    };
+  }
+  async function waitForChapterStats() {
+    const MAX_ATTEMPTS = 20;
+    const INTERVAL = 500;
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        const readsEl = document.querySelector(
+          '[data-testid="story-stats"] span:first-child'
+        ) || document.querySelector(".reads-count");
+        const isReady = readsEl && readsEl.textContent && readsEl.textContent.trim().length > 0;
+        if (isReady) {
+          console.log(
+            `[ChapterAnalytics] DOM ready after ${attempts * INTERVAL}ms`
+          );
+          clearInterval(checkInterval);
+          resolve();
+        } else if (attempts >= MAX_ATTEMPTS) {
+          console.warn(
+            "[ChapterAnalytics] Timeout waiting for stats. Proceeding anyway."
+          );
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, INTERVAL);
+    });
+  }
 })();
 //# sourceMappingURL=content.js.map

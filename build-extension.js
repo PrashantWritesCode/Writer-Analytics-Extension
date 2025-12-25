@@ -45,7 +45,22 @@ async function build() {
     console.log("✅ Copied assets/");
   }
 
-  // 4. Create a ZIP file
+  // 4. Copy chapter analytics bundle (styles, popup, scrapers, etc.)
+  const chapterAnalyticsSrc = path.join(SRC_DIR, "chapter-analytics");
+  const chapterAnalyticsDest = path.join(DIST_DIR, "chapter-analytics");
+  if (fs.existsSync(chapterAnalyticsSrc)) {
+    await fs.copy(chapterAnalyticsSrc, chapterAnalyticsDest);
+    console.log("✅ Copied chapter-analytics/");
+  } else {
+    await fs.mkdirp(chapterAnalyticsDest);
+  }
+
+  const chapterDirs = ["content", "styles", "popup", "storage", "background"];
+  for (const dir of chapterDirs) {
+    await fs.mkdirp(path.join(chapterAnalyticsDest, dir));
+  }
+
+  // 5. Create a ZIP file
   const output = fs.createWriteStream(ZIP_FILE);
   const archive = archiver("zip", { zlib: { level: 9 } });
 

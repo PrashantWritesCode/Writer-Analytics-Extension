@@ -10,8 +10,6 @@ IMPORTANT:
 // Only add the comment.
 // Do not change any functional code.
 
-
-
 // src/content.ts
 type ParagraphComment = {
   pId: string;
@@ -193,7 +191,10 @@ function extractStoryStats(): StoryStats | null {
     }
 
     try {
-      chrome.runtime.sendMessage({ type: "WA_STATS", payload: stats }, () => {});
+      chrome.runtime.sendMessage(
+        { type: "WA_STATS", payload: stats },
+        () => {}
+      );
     } catch (e) {}
 
     return stats;
@@ -206,7 +207,8 @@ function extractStoryStats(): StoryStats | null {
 function waitForContent(): Promise<void> {
   return new Promise((resolve) => {
     const check = () => {
-      if (document.querySelector("h1") || document.querySelector("p")) resolve();
+      if (document.querySelector("h1") || document.querySelector("p"))
+        resolve();
       else setTimeout(check, 400);
     };
     check();
@@ -235,13 +237,17 @@ async function init() {
       capturedAt: new Date().toISOString(),
     };
     try {
-      chrome.runtime.sendMessage({ type: "WA_STATS", payload: sample }, () => {});
+      chrome.runtime.sendMessage(
+        { type: "WA_STATS", payload: sample },
+        () => {}
+      );
     } catch {}
   }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) return;
+
   if (message.type === "WA_REFRESH") {
     const s = extractStoryStats();
     sendResponse({ payload: s || null });
@@ -250,6 +256,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "WA_URL_CHANGE") {
     const s = extractStoryStats();
     sendResponse({ success: !!s, payload: s || null });
+    return true;
+  }
+
+  /* --- CHAPTER ANALYTICS CONTENT SCRIPT LISTENER --- */
+  if (message.type === "SCRAPE_CHAPTER_STATS") {
+    // We wrap this in an async IIFE to use 'await'
+    (async () => {
+      try {
+        // 1. Wait for the SPA to render the stats (reads, votes, etc.)
+        await waitForChapterStats();
+
+        // 2. Extract the data using your replicated selector logic
+        const stats = extractChapterStatsOnly();
+
+        // 3. Destructure the IDs passed from the background script
+        const { storyId, chapterId } = message;
+
+        // 4. Create the predictable storage key for the aggregator
+        const storageKey = `temp_chapter_stats_${storyId}_${chapterId}`;
+
+        // 5. CRITICAL: Await the storage write so the data is saved
+        // BEFORE we tell the background script to close the tab
+        await chrome.storage.local.set({
+          [storageKey]: {
+            reads: stats.reads,
+            votes: stats.votes,
+            comments: stats.comments,
+            capturedAt: new Date().toISOString(),
+          },
+        });
+
+        console.log(`✅ Data saved to storage: ${storageKey}`);
+
+        // 6. Send the "Heartbeat" back to background.ts
+        sendResponse({ success: true });
+      } catch (error:any) {
+        console.error("[ChapterAnalytics] Scrape failed:", error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+
+    // Return true to keep the message channel open for the async response
     return true;
   }
 });
@@ -267,4 +315,106 @@ setInterval(() => {
     init();
   }
 }, 1200);
- 
+
+// Chapter Analytics message handler
+
+/**
+ * REPLICATED SELECTOR LOGIC
+ * Extracts numeric stats from the DOM using proven selectors.
+ */
+function extractChapterStatsOnly() {
+  // 1. Reads
+  const readsSelectors = [
+    '[data-testid="story-stats"] span:first-child',
+    ".reads-count",
+    ".story-stats .reads",
+    ".stats .reads",
+  ];
+  let reads = null;
+  for (const s of readsSelectors) {
+    const el = document.querySelector(s);
+    if (el && el.textContent?.trim()) {
+      reads = parseNumber(el.textContent.trim());
+      break;
+    }
+  }
+
+  // 2. Votes
+  const votesSelectors = [
+    '[data-testid="story-votes"] span',
+    ".votes-count",
+    ".story-stats .votes",
+    ".stats .votes",
+  ];
+  let votes = null;
+  for (const s of votesSelectors) {
+    const el = document.querySelector(s);
+    if (el && el.textContent?.trim()) {
+      votes = parseNumber(el.textContent.trim());
+      break;
+    }
+  }
+
+  // 3. Comments (Header)
+  const commentsSelectors = [
+    '[data-testid="story-comments"] span',
+    ".comments-count",
+    ".story-stats .comments",
+    ".stats .comments",
+  ];
+  let comments = null;
+  for (const s of commentsSelectors) {
+    const el = document.querySelector(s);
+    if (el && el.textContent?.trim()) {
+      comments = parseNumber(el.textContent.trim());
+      break;
+    }
+  }
+
+  return {
+    reads,
+    votes,
+    comments,
+  };
+}
+
+/**
+ * Polls the DOM until the stat elements are present and contain text.
+ * Resolves when data is ready or after a 10s timeout.
+ */
+async function waitForChapterStats(): Promise<void> {
+  const MAX_ATTEMPTS = 20; // 20 attempts * 500ms = 10 seconds
+  const INTERVAL = 500;
+
+  return new Promise((resolve) => {
+    let attempts = 0;
+
+    const checkInterval = setInterval(() => {
+      attempts++;
+
+      // Use your primary selector to check if data has loaded
+      const readsEl =
+        document.querySelector(
+          '[data-testid="story-stats"] span:first-child'
+        ) || document.querySelector(".reads-count");
+
+      // Check if element exists AND has text content (not just an empty span)
+      const isReady =
+        readsEl && readsEl.textContent && readsEl.textContent.trim().length > 0;
+
+      if (isReady) {
+        console.log(
+          `[ChapterAnalytics] DOM ready after ${attempts * INTERVAL}ms`
+        );
+        clearInterval(checkInterval);
+        resolve();
+      } else if (attempts >= MAX_ATTEMPTS) {
+        console.warn(
+          "[ChapterAnalytics] Timeout waiting for stats. Proceeding anyway."
+        );
+        clearInterval(checkInterval);
+        resolve(); // Resolve anyway to prevent the background loop from hanging
+      }
+    }, INTERVAL);
+  });
+}

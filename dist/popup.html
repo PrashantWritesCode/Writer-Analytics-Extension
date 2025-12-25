@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=650, initial-scale=1.0" />
   <title>Writer Analytics</title>
   <link rel="stylesheet" href="popup.css" />
+  <link rel="stylesheet" href="./chapter-analytics/styles/dashboard.css" />
+  <link rel="stylesheet" href="./chapter-analytics/styles/analytics.css" />
+  <link rel="stylesheet" href="./chapter-analytics/styles/index.css" />
 </head>
 
 <body>
@@ -32,7 +35,17 @@
           </div>
         </button>
 
+        <!-- 📘 Chapter Analytics -->
+        <button id="open-chapter-analytics" class="feature-card teal">
+          <div class="icon">📘</div>
+          <div class="text">
+            <div class="title">Chapter Analytics</div>
+            <div class="desc">Analyze chapter-level performance.</div>
+          </div>
+        </button>
+
         <!-- 🎧 StoryTeller (Coming Soon) -->
+        <!--
         <div class="feature-card blue coming-soon">
           <div class="icon">🎧</div>
           <div class="text">
@@ -43,8 +56,10 @@
             <div class="desc">Hear your story come alive.</div>
           </div>
         </div>
+        -->
 
         <!-- 🎨 StoryPlot AI (Coming Soon) -->
+        <!--
         <div class="feature-card purple coming-soon">
           <div class="icon">🎨</div>
           <div class="text">
@@ -55,6 +70,7 @@
             <div class="desc">Visualize your characters.</div>
           </div>
         </div>
+        -->
 
       </section>
 
@@ -155,6 +171,9 @@
       <button id="feedback-btn-bottom" class="btn outline-btn">Send Feedback</button>
     </div>
   </div>
+
+  <div id="chapter-dashboard" style="display: none;"></div>
+  <div id="chapter-analytics" style="display: none;"></div>
 
   <script type="module" src="popup.js"></script>
 </body>

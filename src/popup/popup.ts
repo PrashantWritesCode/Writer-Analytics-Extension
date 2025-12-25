@@ -9,6 +9,13 @@
 
 
 import html2canvas from "html2canvas";
+import {
+  handleTrackStoryClick,
+  initChapterDashboard,
+} from "../chapter-analytics/popup/dashboard";
+
+// DEBUG-CHAPTER-ANALYTICS-LOG
+console.log("[popup] loading popup.js");
 
 /* ---------------------------------------------
    Helper DOM Utilities
@@ -359,12 +366,66 @@ function showHome(): void {
   }
 }
 
+function showChapterDashboard(): void {
+  // DEBUG-CHAPTER-ANALYTICS-LOG
+  console.log("[popup] showChapterDashboard called");
+  const home = $("home-screen");
+  const storyAnalytics = $("analytics-ui");
+  const chapterDashboard = $("chapter-dashboard");
+  const chapterAnalytics = $("chapter-analytics");
+
+  if (home) home.style.display = "none";
+  if (storyAnalytics) storyAnalytics.style.display = "none";
+  if (chapterAnalytics) chapterAnalytics.style.display = "none";
+
+  if (chapterDashboard) {
+    chapterDashboard.style.display = "block";
+    chapterDashboard.style.opacity = "1";
+  }
+
+  // DEBUG-CHAPTER-ANALYTICS-LOG
+  console.log("[popup] chapter-dashboard element:", !!chapterDashboard);
+  initChapterDashboard();
+}
+
+export function showChapterAnalyticsScreen(storyId: string): void {
+  const chapterDashboard = $("chapter-dashboard");
+  const chapterAnalytics = $("chapter-analytics");
+
+  if (chapterDashboard) chapterDashboard.style.display = "none";
+
+  if (chapterAnalytics) {
+    chapterAnalytics.style.display = "block";
+    chapterAnalytics.style.opacity = "1";
+  }
+}
+
+function setupChapterDashboardEvents(): void {
+  const dashboard = $("chapter-dashboard");
+  if (!dashboard) return;
+
+  dashboard.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("#chapter-track-story-btn")) {
+      handleTrackStoryClick();
+    }
+  });
+}
+
 function setupStoryAnalyticsButton(): void {
   const btn = $("open-analytics");
   if (!btn) return;
   btn.addEventListener("click", () => {
     showAnalytics();
     refreshData();
+  });
+}
+
+function setupChapterAnalyticsButton(): void {
+  const btn = $("open-chapter-analytics");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    showChapterDashboard();
   });
 }
 
@@ -405,6 +466,8 @@ function setupSampleStoryButton(): void {
 document.addEventListener("DOMContentLoaded", () => {
   showHome();
   setupStoryAnalyticsButton();
+  setupChapterAnalyticsButton();
+  setupChapterDashboardEvents();
   setupExportButton();
   setupFeedbackButton();
   setupBackButton();
