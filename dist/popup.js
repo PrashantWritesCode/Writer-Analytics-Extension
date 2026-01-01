@@ -7897,147 +7897,254 @@ async function saveSnapshot(storyId, chapters) {
   await storageSet({ [key]: snapshot });
 }
 
+// src/chapter-analytics/analytics/deriveMetrics.ts
+function calculateRetention(chapters) {
+  if (chapters.length < 2)
+    return { value: 100, status: "Good" };
+  const firstReads = chapters[0].statHistory?.slice(-1)[0]?.reads || 0;
+  const lastReads = chapters[chapters.length - 1].statHistory?.slice(-1)[0]?.reads || 0;
+  if (firstReads === 0)
+    return { value: 0, status: "Needs Attention" };
+  const retention = Math.round(lastReads / firstReads * 100);
+  const status = retention < 40 ? "Needs Attention" : "Good";
+  return { value: retention, status };
+}
+function findBiggestDropOff(chapters) {
+  let maxDropPercent = 0;
+  let problematicChapter = "N/A";
+  for (let i = 1; i < chapters.length; i++) {
+    const prevReads = chapters[i - 1].statHistory?.slice(-1)[0]?.reads || 0;
+    const currReads = chapters[i].statHistory?.slice(-1)[0]?.reads || 0;
+    if (prevReads > 0) {
+      const drop = (prevReads - currReads) / prevReads;
+      if (drop > maxDropPercent) {
+        maxDropPercent = drop;
+        problematicChapter = chapters[i].chapterTitle || `Chapter ${i + 1}`;
+      }
+    }
+  }
+  return {
+    chapterLabel: problematicChapter,
+    dropValue: Math.round(maxDropPercent * 100)
+  };
+}
+function findStrongestChapter(chapters) {
+  let bestRatio = 0;
+  let bestChapter = chapters[0]?.chapterTitle || "Chapter 1";
+  chapters.forEach((c) => {
+    const latest = c.statHistory?.slice(-1)[0];
+    if (latest && latest.reads && latest.reads > 0) {
+      const ratio = ((latest.votes || 0) + (latest.comments || 0)) / latest.reads;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        bestChapter = c.chapterTitle;
+      }
+    }
+  });
+  return { title: bestChapter };
+}
+function findFatigueStart(chapters) {
+  const firstReads = chapters[0].statHistory?.slice(-1)[0]?.reads || 0;
+  if (!firstReads)
+    return "N/A";
+  const fatigueChapter = chapters.find((c) => {
+    const reads = c.statHistory?.slice(-1)[0]?.reads || 0;
+    return reads / firstReads < 0.3;
+  });
+  return fatigueChapter ? fatigueChapter.chapterTitle : "None detected";
+}
+
+// src/chapter-analytics/analytics/storyInsights.ts
+function getStoryDiagnosis(chapters) {
+  const dropOff = findBiggestDropOff(chapters);
+  let primaryAlert = `\u26A0\uFE0F Your story loses readers sharply at ${dropOff.chapterLabel}.`;
+  let tags = ["Pacing slows", "Long exposition", "POV shift"];
+  const recoveryPoint = chapters.find((c, i) => {
+    if (i === 0)
+      return false;
+    const curr = c.statHistory?.slice(-1)[0]?.reads || 0;
+    const prev = chapters[i - 1].statHistory?.slice(-1)[0]?.reads || 0;
+    return curr > prev;
+  });
+  return {
+    primaryAlert,
+    tags,
+    recoveryChapter: recoveryPoint?.chapterTitle || null
+  };
+}
+
 // src/chapter-analytics/popup/dashboard.ts
 var dashboardContainer = null;
 var trackedStoriesCache = [];
-function getLatestStats(chapter) {
-  const h = chapter.statHistory;
-  if (!h || h.length === 0)
-    return null;
-  return h[h.length - 1];
-}
-function getPreviousStats(chapter) {
-  const h = chapter.statHistory;
-  if (!h || h.length < 2)
-    return null;
-  return h[h.length - 2];
-}
-function computeDelta(latest, prev) {
-  if (!latest || !prev)
-    return null;
-  return {
-    reads: latest.reads !== null && prev.reads !== null ? latest.reads - prev.reads : null,
-    votes: latest.votes !== null && prev.votes !== null ? latest.votes - prev.votes : null,
-    comments: latest.comments !== null && prev.comments !== null ? latest.comments - prev.comments : null
-  };
-}
 function renderChapterDashboard(container, stories = []) {
   if (!container)
     return;
   container.innerHTML = `
-    <section class="chapter-banner">Track 2 stories for free</section>
+    <div class="chapter-view">
+      <section class="chapter-top-banner">
+        <span>Track your stories for insights</span>
+      </section>
 
-    <button id="chapter-track-story-btn" class="chapter-track-card">
-      <span class="chapter-track-card__title">Track a new Wattpad story</span>
-      <span class="chapter-track-card__subtitle">Open a story page to begin</span>
-    </button>
+      <div class="chapter-track-card-premium">
+        <div class="track-card-content">
+          <h2 class="track-card-title">Track a new Wattpad story</h2>
+          <p class="track-card-subtitle">Link your Wattpad stories for deeper insights</p>
+        </div>
+        <button id="chapter-track-story-btn" class="track-action-btn">
+          Track Story
+        </button>
+      </div>
 
-    <h3 class="chapter-section-title">Your Stories</h3>
+      <h3 class="chapter-section-header">
+        <span class="sparkle">\u2726</span> YOUR STORIES
+      </h3>
 
-    <div class="chapter-stories">
-      ${stories.length ? stories.map(
+      <div class="chapter-stories-list">
+        ${stories.length ? stories.map(
     (s) => `
-                  <div class="chapter-story-card" data-story-id="${s.storyId}">
-                    <div class="chapter-story-main">
-                      <div class="chapter-story-title">
-                        ${s.title || "Untitled Story"}
+                    <div class="story-list-card" data-story-id="${s.storyId}">
+                      <div class="story-info-left">
+                        <h4 class="story-title">
+                          ${s.title || "Untitled Story"}
+                          <span class="verified-check">\u2713</span>
+                        </h4>
+                        <p class="story-meta">
+                          ${s.totalChapters} chapters
+                        </p>
                       </div>
-                      <div class="chapter-story-meta">
-                        ${s.totalChapters} chapters
-                      </div>
-                    </div>
 
-                    <div class="chapter-story-actions">
-                      <button
-                        class="chapter-update-btn"
-                        data-story-id="${s.storyId}"
-                      >
-                        Update
-                      </button>
-                      <span class="chapter-story-chevron">\u2192</span>
+                      <div class="story-actions-group">
+                        <button class="story-btn update-btn" data-story-id="${s.storyId}">
+                          <span class="sync-icon">\u21BB</span> Update
+                        </button>
+                        <button class="story-btn view-btn" data-story-id="${s.storyId}">
+                          View Insights \u2192
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                `
+                  `
   ).join("") : `
-            <div class="chapter-empty">
-              <p>No stories tracked yet</p>
-              <span class="chapter-empty__subtitle">
-                Add your first story to begin
-              </span>
-            </div>
-          `}
+              <div class="chapter-empty-state">
+                <p>No stories tracked yet.</p>
+                <span>Add your first story to begin</span>
+              </div>
+            `}
+      </div>
     </div>
   `;
-  container.querySelectorAll(".chapter-story-card").forEach((card) => {
-    card.onclick = async () => {
-      const storyId = card.dataset.storyId;
-      const snapshot = await getSnapshot(storyId);
-      const story = trackedStoriesCache.find((s) => s.storyId === storyId);
-      if (!story)
-        return;
-      renderStoryChaptersView(container, story, snapshot?.chapters || []);
-    };
-  });
-  container.querySelectorAll(".chapter-update-btn").forEach((btn) => {
+  attachListEventListeners(container);
+}
+function attachListEventListeners(container) {
+  const trackBtn = container.querySelector("#chapter-track-story-btn");
+  if (trackBtn)
+    trackBtn.onclick = () => handleTrackStoryClick();
+  container.querySelectorAll(".update-btn").forEach((btn) => {
     btn.onclick = (e) => {
       e.stopPropagation();
       const storyId = btn.dataset.storyId;
+      btn.innerHTML = `<span class="sync-icon spinning">\u21BB</span> Updating...`;
       chrome.runtime.sendMessage({
         type: "UPDATE_CHAPTER_STATS",
         storyId
       });
     };
   });
+  const openDashboard = async (storyId) => {
+    const snapshot = await getSnapshot(storyId);
+    const story = trackedStoriesCache.find((s) => s.storyId === storyId);
+    if (!story || !snapshot)
+      return;
+    renderStoryDashboard(container, story, snapshot.chapters || []);
+  };
+  container.querySelectorAll(".view-btn").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      openDashboard(btn.dataset.storyId);
+    };
+  });
+  container.querySelectorAll(".story-list-card").forEach((card) => {
+    card.onclick = () => openDashboard(card.dataset.storyId);
+  });
 }
-function renderStoryChaptersView(container, story, chapters) {
+function renderStoryDashboard(container, story, chapters) {
+  const retention = calculateRetention(chapters);
+  const dropOff = findBiggestDropOff(chapters);
+  const strongest = findStrongestChapter(chapters);
+  const fatigue = findFatigueStart(chapters);
+  const diagnosis = getStoryDiagnosis(chapters);
   container.innerHTML = `
-    <div class="chapter-view">
-
-      <button class="chapter-back-btn">\u2190 Back</button>
-
-      <div class="chapter-header">
-        <h2 class="chapter-story-title">${story.title}</h2>
-        <p class="chapter-story-meta">
-          ${chapters.length} chapters
-        </p>
+    <div class="chapter-view dashboard-mode">
+      <div class="dashboard-header">
+        <button class="chapter-back-btn">\u2190 Back to Stories</button>
+        <div class="header-main">
+          <h2 class="chapter-story-title-display">${story.title} <span class="verified-check">\u2713</span></h2>
+          <p class="chapter-story-meta-display">
+            ${chapters.length} chapters \u2022 Updated ${new Date(story.lastUpdated).toLocaleDateString()}
+          </p>
+        </div>
+        <button class="story-btn view-btn update-sync-btn" data-story-id="${story.storyId}">
+          \u21BB Sync Latest Stats
+        </button>
       </div>
 
-      <div class="chapter-divider"></div>
-
-      <div class="chapter-list">
-        ${chapters.length ? chapters.map((c) => {
-    const latest = getLatestStats(c);
-    const prev = getPreviousStats(c);
-    const delta = computeDelta(latest, prev);
-    console.log({ latest, prev, delta });
-    let subtitle = "No data yet";
-    if (latest?.reads !== null) {
-      subtitle = `${latest.reads} reads`;
-      if (delta?.reads) {
-        subtitle += ` \xB7 ${delta.reads > 0 ? "+" : ""}${delta.reads}`;
-      }
-    }
-    return `
-                    <div class="chapter-card">
-                      <div class="chapter-index-badge">
-                        ${String(c.chapterId).padStart(2, "0")}
-                      </div>
-
-                      <div class="chapter-info">
-                        <div class="chapter-title">${c.chapterTitle}</div>
-                        <div class="chapter-subtitle">${subtitle}</div>
-                      </div>
-
-                      <div class="chapter-chevron">\u203A</div>
-                    </div>
-                  `;
-  }).join("") : `<p class="chapter-empty">No chapters found</p>`}
+      <div class="insight-grid">
+        <div class="insight-card">
+          <span class="card-label">Reader Retention</span>
+          <div class="card-value">${retention.value}%</div>
+          <span class="card-subtext">reach final chapter</span>
+          <span class="status-badge ${retention.status.toLowerCase().replace(" ", "-")}">${retention.status}</span>
+        </div>
+        <div class="insight-card">
+          <span class="card-label">Biggest Drop-off</span>
+          <div class="card-value">${dropOff.chapterLabel}</div>
+          <div class="card-subtext red">\u25BC ${dropOff.dropValue}% loss</div>
+        </div>
+        <div class="insight-card">
+          <span class="card-label">Engagement Peak</span>
+          <div class="card-value">${strongest.title}</div>
+          <div class="card-subtext teal">\u2605 Highest comments/votes</div>
+        </div>
+        <div class="insight-card">
+          <span class="card-label">Story Fatigue</span>
+          <div class="card-value">Starts at</div>
+          <div class="card-subtext">${fatigue}</div>
+        </div>
       </div>
 
+      <div class="diagnosis-panel">
+        <div class="diagnosis-header">\u26A0\uFE0F Intelligence Diagnosis</div>
+        <div class="diagnosis-content">
+          <p class="primary-alert">${diagnosis.primaryAlert}</p>
+          <div class="tag-row">
+            ${diagnosis.tags.map((tag) => `<span class="diag-tag">${tag}</span>`).join("")}
+          </div>
+          ${diagnosis.recoveryChapter ? `<p class="recovery-text">\u2705 Momentum recovers at <strong>${diagnosis.recoveryChapter}</strong></p>` : ""}
+        </div>
+      </div>
+
+      <div class="action-section">
+        <h3 class="section-title">Priority Improvements</h3>
+        <div class="checklist">
+          <div class="check-item">
+            <input type="checkbox"> 
+            <span>Rewrite <strong>${dropOff.chapterLabel}</strong> to prevent the ${dropOff.dropValue}% drop</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox"> 
+            <span>Check pacing at <strong>${fatigue}</strong></span>
+          </div>
+        </div>
+      </div>
     </div>
   `;
   container.querySelector(".chapter-back-btn").onclick = () => {
     renderChapterDashboard(container, trackedStoriesCache);
+  };
+  container.querySelector(".update-sync-btn").onclick = () => {
+    chrome.runtime.sendMessage({
+      type: "UPDATE_CHAPTER_STATS",
+      storyId: story.storyId
+    });
   };
 }
 async function initChapterDashboard() {
@@ -8048,8 +8155,6 @@ async function initChapterDashboard() {
   renderChapterDashboard(dashboardContainer, trackedStoriesCache);
 }
 async function handleTrackStoryClick() {
-  if (!dashboardContainer)
-    dashboardContainer = document.getElementById("chapter-dashboard");
   if (!dashboardContainer)
     return;
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -8066,17 +8171,13 @@ async function handleTrackStoryClick() {
         const tocRoot = document.querySelector('div[data-testid="toc"]');
         if (!tocRoot)
           return null;
-        const anchors = Array.from(
-          tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a')
-        );
+        const anchors = Array.from(tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a'));
         const chapters2 = anchors.map((a, i) => {
           const urlParts = a.href.split("/");
           const lastSegment = urlParts[urlParts.length - 1];
           const match = lastSegment.match(/^(\d+)/);
-          const chapterId = match ? match[1] : `chapter-${i + 1}`;
           return {
-            chapterId,
-            // This will now be "1414501394"
+            chapterId: match ? match[1] : `chapter-${i + 1}`,
             chapterUrl: a.href,
             chapterTitle: a.querySelector(".wpYp-")?.textContent?.trim() || `Chapter ${i + 1}`
           };
@@ -8084,7 +8185,7 @@ async function handleTrackStoryClick() {
         return { storyId: storyId2, title: title2, chapters: chapters2 };
       }
     });
-    if (!result || !result.storyId || !result.chapters.length)
+    if (!result || !result.storyId)
       return;
     const { storyId, title, chapters } = result;
     const newStory = {
@@ -8093,10 +8194,7 @@ async function handleTrackStoryClick() {
       totalChapters: chapters.length,
       lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
     };
-    trackedStoriesCache = [
-      ...trackedStoriesCache.filter((s) => s.storyId !== storyId),
-      newStory
-    ];
+    trackedStoriesCache = [...trackedStoriesCache.filter((s) => s.storyId !== storyId), newStory];
     await saveTrackedStories(trackedStoriesCache);
     await saveSnapshot(storyId, chapters);
     renderChapterDashboard(dashboardContainer, trackedStoriesCache);
