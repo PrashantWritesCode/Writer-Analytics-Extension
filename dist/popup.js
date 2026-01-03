@@ -7980,56 +7980,64 @@ function renderChapterDashboard(container, stories = []) {
   if (!container)
     return;
   container.innerHTML = `
-    <div class="chapter-view">
+    <div class="chapter-view page-surface">
+
       <section class="chapter-top-banner">
-        <span>Track your stories for insights</span>
+        Track your stories for deeper reader insights
       </section>
 
-      <div class="chapter-track-card-premium">
+      <section class="chapter-track-card-premium">
         <div class="track-card-content">
           <h2 class="track-card-title">Track a new Wattpad story</h2>
-          <p class="track-card-subtitle">Link your Wattpad stories for deeper insights</p>
+          <p class="track-card-subtitle">
+            Link your story to unlock chapter-level insights
+          </p>
         </div>
         <button id="chapter-track-story-btn" class="track-action-btn">
           Track Story
         </button>
-      </div>
+      </section>
 
       <h3 class="chapter-section-header">
         <span class="sparkle">\u2726</span> YOUR STORIES
       </h3>
 
-      <div class="chapter-stories-list">
+      <section class="chapter-stories-list">
         ${stories.length ? stories.map(
     (s) => `
-                    <div class="story-list-card" data-story-id="${s.storyId}">
-                      <div class="story-info-left">
-                        <h4 class="story-title">
-                          ${s.title || "Untitled Story"}
-                          <span class="verified-check">\u2713</span>
-                        </h4>
-                        <p class="story-meta">
-                          ${s.totalChapters} chapters
-                        </p>
-                      </div>
+          <article class="story-list-card" data-story-id="${s.storyId}">
+            <div class="story-info-left">
+              <h4 class="story-title">
+                ${s.title || "Untitled Story"}
+                <span class="verified-check">\u2713</span>
+              </h4>
+              <p class="story-meta">
+                ${s.totalChapters} chapters
+              </p>
+            </div>
 
-                      <div class="story-actions-group">
-                        <button class="story-btn update-btn" data-story-id="${s.storyId}">
-                          <span class="sync-icon">\u21BB</span> Update
-                        </button>
-                        <button class="story-btn view-btn" data-story-id="${s.storyId}">
-                          View Insights \u2192
-                        </button>
-                      </div>
-                    </div>
-                  `
+            <div class="story-actions-group">
+              <button
+                class="story-btn update-btn"
+                data-story-id="${s.storyId}">
+                <span class="sync-icon">\u21BB</span> Update
+              </button>
+              <button
+                class="story-btn view-btn"
+                data-story-id="${s.storyId}">
+                View Insights \u2192
+              </button>
+            </div>
+          </article>
+        `
   ).join("") : `
-              <div class="chapter-empty-state">
-                <p>No stories tracked yet.</p>
-                <span>Add your first story to begin</span>
-              </div>
-            `}
-      </div>
+          <div class="chapter-empty-state">
+            <p>No stories tracked yet</p>
+            <span>Add your first story to begin</span>
+          </div>
+        `}
+      </section>
+
     </div>
   `;
   attachListEventListeners(container);
@@ -8073,67 +8081,113 @@ function renderStoryDashboard(container, story, chapters) {
   const fatigue = findFatigueStart(chapters);
   const diagnosis = getStoryDiagnosis(chapters);
   container.innerHTML = `
-    <div class="chapter-view dashboard-mode">
-      <div class="dashboard-header">
-        <button class="chapter-back-btn">\u2190 Back to Stories</button>
-        <div class="header-main">
-          <h2 class="chapter-story-title-display">${story.title} <span class="verified-check">\u2713</span></h2>
-          <p class="chapter-story-meta-display">
-            ${chapters.length} chapters \u2022 Updated ${new Date(story.lastUpdated).toLocaleDateString()}
-          </p>
-        </div>
-        <button class="story-btn view-btn update-sync-btn" data-story-id="${story.storyId}">
-          \u21BB Sync Latest Stats
-        </button>
-      </div>
+    <div class="chapter-view dashboard-mode page-surface">
+      <div class="dashboard-page">
 
-      <div class="insight-grid">
-        <div class="insight-card">
-          <span class="card-label">Reader Retention</span>
-          <div class="card-value">${retention.value}%</div>
-          <span class="card-subtext">reach final chapter</span>
-          <span class="status-badge ${retention.status.toLowerCase().replace(" ", "-")}">${retention.status}</span>
-        </div>
-        <div class="insight-card">
-          <span class="card-label">Biggest Drop-off</span>
-          <div class="card-value">${dropOff.chapterLabel}</div>
-          <div class="card-subtext red">\u25BC ${dropOff.dropValue}% loss</div>
-        </div>
-        <div class="insight-card">
-          <span class="card-label">Engagement Peak</span>
-          <div class="card-value">${strongest.title}</div>
-          <div class="card-subtext teal">\u2605 Highest comments/votes</div>
-        </div>
-        <div class="insight-card">
-          <span class="card-label">Story Fatigue</span>
-          <div class="card-value">Starts at</div>
-          <div class="card-subtext">${fatigue}</div>
-        </div>
-      </div>
+        <!-- HEADER -->
+        <header class="dashboard-header">
+          <div class="dashboard-header-left">
+            <button class="chapter-back-btn">\u2190 Back to Stories</button>
+            <div class="story-context">
+              <h2 class="chapter-story-title-display">
+                ${story.title}
+                <span class="verified-check">\u2713</span>
+              </h2>
+              <p class="chapter-story-meta-display">
+                ${chapters.length} chapters \u2022 Updated ${new Date(
+    story.lastUpdated
+  ).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
 
-      <div class="diagnosis-panel">
-        <div class="diagnosis-header">\u26A0\uFE0F Intelligence Diagnosis</div>
-        <div class="diagnosis-content">
-          <p class="primary-alert">${diagnosis.primaryAlert}</p>
-          <div class="tag-row">
-            ${diagnosis.tags.map((tag) => `<span class="diag-tag">${tag}</span>`).join("")}
+          <div class="dashboard-header-right">
+            <button
+              class="story-btn view-btn update-sync-btn"
+              data-story-id="${story.storyId}">
+              \u21BB Sync Latest Stats
+            </button>
           </div>
-          ${diagnosis.recoveryChapter ? `<p class="recovery-text">\u2705 Momentum recovers at <strong>${diagnosis.recoveryChapter}</strong></p>` : ""}
-        </div>
-      </div>
+        </header>
 
-      <div class="action-section">
-        <h3 class="section-title">Priority Improvements</h3>
-        <div class="checklist">
-          <div class="check-item">
-            <input type="checkbox"> 
-            <span>Rewrite <strong>${dropOff.chapterLabel}</strong> to prevent the ${dropOff.dropValue}% drop</span>
-          </div>
-          <div class="check-item">
-            <input type="checkbox"> 
-            <span>Check pacing at <strong>${fatigue}</strong></span>
-          </div>
-        </div>
+        <!-- CARDS SURFACE -->
+        <section class="dashboard-cards-surface">
+          <section class="insight-grid">
+            <article class="insight-card">
+              <span class="card-label">Reader Retention</span>
+              <div class="card-value">${retention.value}%</div>
+              <span class="card-subtext">reach final chapter</span>
+              <span class="status-badge ${retention.status.toLowerCase().replace(" ", "-")}">
+                ${retention.status}
+              </span>
+            </article>
+
+            <article class="insight-card">
+              <span class="card-label">Biggest Drop-off</span>
+              <div class="card-value">${dropOff.chapterLabel}</div>
+              <span class="card-subtext red">
+                \u25BC ${dropOff.dropValue}% loss
+              </span>
+            </article>
+
+            <article class="insight-card">
+              <span class="card-label">Engagement Peak</span>
+              <div class="card-value">${strongest.title}</div>
+              <span class="card-subtext teal">
+                \u2605 Highest comments & votes
+              </span>
+            </article>
+
+            <article class="insight-card">
+              <span class="card-label">Story Fatigue</span>
+              <div class="card-value">Starts at</div>
+              <span class="card-subtext">${fatigue}</span>
+            </article>
+          </section>
+        </section>
+
+        <!-- CONTENT FLOW -->
+        <section class="dashboard-content">
+
+          <section class="diagnosis-panel">
+            <h3 class="diagnosis-header">\u26A0 Intelligence Diagnosis</h3>
+
+            <p class="primary-alert">
+              ${diagnosis.primaryAlert}
+            </p>
+
+            <div class="tag-row">
+              ${diagnosis.tags.map((tag) => `<span class="diag-tag">${tag}</span>`).join("")}
+            </div>
+
+            ${diagnosis.recoveryChapter ? `
+              <p class="recovery-text">
+                Momentum recovers at <strong>${diagnosis.recoveryChapter}</strong>
+              </p>
+            ` : ""}
+          </section>
+
+          <section class="action-section">
+            <h3 class="section-title">Priority Improvements</h3>
+
+            <div class="checklist">
+              <label class="check-item">
+                <input type="checkbox" />
+                <span>
+                  Rewrite <strong>${dropOff.chapterLabel}</strong> to reduce drop-off
+                </span>
+              </label>
+
+              <label class="check-item">
+                <input type="checkbox" />
+                <span>
+                  Review pacing around <strong>${fatigue}</strong>
+                </span>
+              </label>
+            </div>
+          </section>
+
+        </section>
       </div>
     </div>
   `;
@@ -8171,7 +8225,9 @@ async function handleTrackStoryClick() {
         const tocRoot = document.querySelector('div[data-testid="toc"]');
         if (!tocRoot)
           return null;
-        const anchors = Array.from(tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a'));
+        const anchors = Array.from(
+          tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a')
+        );
         const chapters2 = anchors.map((a, i) => {
           const urlParts = a.href.split("/");
           const lastSegment = urlParts[urlParts.length - 1];
@@ -8194,7 +8250,10 @@ async function handleTrackStoryClick() {
       totalChapters: chapters.length,
       lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
     };
-    trackedStoriesCache = [...trackedStoriesCache.filter((s) => s.storyId !== storyId), newStory];
+    trackedStoriesCache = [
+      ...trackedStoriesCache.filter((s) => s.storyId !== storyId),
+      newStory
+    ];
     await saveTrackedStories(trackedStoriesCache);
     await saveSnapshot(storyId, chapters);
     renderChapterDashboard(dashboardContainer, trackedStoriesCache);

@@ -1,308 +1,387 @@
 /* =====================================================
-   1. CORE THEME & VARIABLES
+   1. ROOT THEME VARIABLES
    ===================================================== */
 :root {
-  /* Brand Colors */
   --wa-teal: #0d9488;
   --wa-teal-dark: #0f766e;
-  --wa-teal-light: #f0fdfa;
-  
-  /* Neutral Palette */
+
   --wa-bg-page: #f9fafb;
   --wa-bg-card: #ffffff;
+
   --wa-text-title: #111827;
-  --wa-text-body: #4b5563;
-  --wa-text-muted: #9ca3af;
-  --wa-border: #f3f4f6;
+  --wa-text-body: #374151;
+  --wa-text-muted: #6b7280;
 
-  /* Accent Gradients */
-  --wa-purple-bg: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-  --wa-purple-text: #4338ca;
+  --wa-border: #e5e7eb;
 
-  /* Geometry & Shadows (The "Elegant" Secret) */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 6px 14px rgba(0,0,0,0.06);
 }
 
 /* =====================================================
-   2. GLOBAL LAYOUT
+   2. PAGE / WIDTH / CANVAS
    ===================================================== */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--wa-bg-page);
+}
+
+#chapter-dashboard {
+  width: 100%;
+  max-width: 100%;
+  background: var(--wa-bg-page);
+}
+
 .chapter-view {
-  background-color: var(--wa-bg-page);
-  color: var(--wa-text-body);
-  font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  padding: 24px;
-  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 32px;
   box-sizing: border-box;
+  background: var(--wa-bg-page);
+  color: var(--wa-text-body);
+  font-family: Inter, -apple-system, system-ui, sans-serif;
 }
 
 /* =====================================================
-   3. TOP BANNER & HEADERS
+   3. TOP BANNER
    ===================================================== */
 .chapter-top-banner {
-  background: var(--wa-teal-light);
-  border: 1px dashed #99f6e4;
-  color: var(--wa-teal);
-  padding: 10px;
+  background: #ecfdf5;
+  color: var(--wa-teal-dark);
+  padding: 12px;
   border-radius: var(--radius-sm);
   text-align: center;
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 24px;
-}
-
-.chapter-section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: var(--wa-teal);
-  margin: 32px 0 16px 0;
-  opacity: 0.8;
-}
-
-.sparkle {
-  font-size: 14px;
+  margin-bottom: 28px;
 }
 
 /* =====================================================
-   4. PREMIUM TRACK CARD
+   4. TRACK STORY CARD
    ===================================================== */
 .chapter-track-card-premium {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  background: var(--wa-purple-bg);
-  padding: 24px;
+  align-items: center;
+  background: linear-gradient(135deg, #f5f7ff, #eef2ff);
+  padding: 26px 28px;
   border-radius: var(--radius-lg);
-  border: 1px solid #e0e7ff;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;
 }
 
 .track-card-title {
-  margin: 0 0 4px 0;
+  margin: 0 0 6px;
   font-size: 18px;
   font-weight: 800;
-  color: #312e81;
+  color: #1e1b4b;
 }
 
 .track-card-subtitle {
   margin: 0;
   font-size: 14px;
-  color: #6366f1;
+  color: #4f46e5;
 }
 
 .track-action-btn {
   background: var(--wa-teal);
-  color: white;
+  color: #ffffff;
   border: none;
-  padding: 12px 20px;
-  border-radius: var(--radius-sm); /* Rectangular Material Style */
+  padding: 10px 18px;
+  border-radius: 6px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
 }
 
 .track-action-btn:hover {
   background: var(--wa-teal-dark);
-  transform: translateY(-1px);
 }
 
 /* =====================================================
-   5. STORY LIST ITEMS
+   5. STORY LIST (REFINED)
    ===================================================== */
-.story-list-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--wa-bg-card);
-  padding: 20px 24px;
-  border-radius: var(--radius-md);
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--wa-border);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.story-list-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
-  border-color: #cbd5e1;
-}
-
-.story-title {
+.chapter-section-header {
+  margin: 36px 0 16px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--wa-teal);
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 4px 0;
+}
+
+.story-list-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: var(--wa-bg-card);
+  border: 1px solid var(--wa-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px; /* tighter vertical rhythm */
+  margin-bottom: 12px;
+
+  box-shadow: var(--shadow-xs);
+}
+
+.story-list-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+
+/* LEFT SIDE */
+.story-info-left {
+  max-width: calc(100% - 200px);
+}
+
+.story-title {
+  margin: 0 0 4px;
   font-size: 16px;
   font-weight: 700;
   color: var(--wa-text-title);
+  gap: 6px;
+
+  /* 2-line clamp = consistent card height */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
 
 .verified-check {
   color: var(--wa-teal);
-  font-size: 14px;
+  font-size: 13px;
+  opacity: 0.75; /* demoted hierarchy */
 }
 
 .story-meta {
-  margin: 0;
   font-size: 13px;
   color: var(--wa-text-muted);
 }
 
-/* =====================================================
-   6. BUTTONS (THE RECTANGULAR FIX)
-   ===================================================== */
+/* RIGHT SIDE ACTIONS */
 .story-actions-group {
   display: flex;
   gap: 10px;
+  align-items: center; /* aligns with title, not card center */
+  margin-top: 2px;
 }
 
+/* =====================================================
+   6. BUTTONS
+   ===================================================== */
 .story-btn {
-  padding: 8px 16px;
+  padding: 7px 14px;
   font-size: 13px;
   font-weight: 700;
-  border-radius: 6px; /* Material 3 Standard Corner */
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   border: none;
+  white-space: nowrap;
 }
 
-/* Gray Update Button */
 .update-btn {
   background: #f3f4f6;
-  color: #4b5563;
-  border: 1px solid #e5e7eb;
+  color: #374151;
+  border: 1px solid var(--wa-border);
 }
 
-.update-btn:hover {
-  background: #e5e7eb;
-  color: #111827;
-}
-
-/* Teal View Insights Button */
 .view-btn {
   background: var(--wa-teal);
-  color: white;
+  color: #ffffff;
 }
 
 .view-btn:hover {
   background: var(--wa-teal-dark);
 }
 
-/* Spin Animation for Sync Icon */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.spinning {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-}
-
 /* =====================================================
-   7. ANALYTICS DASHBOARD VIEW
+   7. DASHBOARD STRUCTURE
    ===================================================== */
-.dashboard-mode {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.dashboard-page {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .dashboard-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
+  align-items: flex-start;
+  margin-bottom: 40px;
 }
 
 .chapter-back-btn {
   background: none;
   border: none;
+  padding: 0;
+  margin-bottom: 6px;
   color: var(--wa-teal);
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
+}
+
+.chapter-story-title-display {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--wa-text-title);
+}
+
+.chapter-story-meta-display {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--wa-text-muted);
+}
+
+/* =====================================================
+   8. INSIGHT CARDS
+   ===================================================== */
+.dashboard-cards-surface {
+  background: transparent;
+  margin-bottom: 36px;
 }
 
 .insight-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
 }
 
 .insight-card {
-  background: white;
-  padding: 20px;
+  background: var(--wa-bg-card);
   border-radius: var(--radius-md);
-  border: 1px solid var(--wa-border);
+  padding: 24px;
   box-shadow: var(--shadow-sm);
 }
 
 .card-label {
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--wa-text-muted);
-  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .card-value {
-  font-size: 24px;
+  margin: 10px 0 6px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--wa-text-title);
-  margin: 8px 0;
+}
+
+.card-subtext {
+  font-size: 13px;
+  color: var(--wa-text-muted);
+}
+
+.card-subtext.teal {
+  color: var(--wa-teal);
+}
+
+.card-subtext.red {
+  color: #b91c1c;
 }
 
 .status-badge {
+  margin-top: 10px;
   display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 800;
-  margin-top: 8px;
+  font-weight: 700;
 }
 
-.status-badge.healthy { background: #dcfce7; color: #166534; }
-.status-badge.at-risk { background: #fee2e2; color: #991b1b; }
+.status-badge.healthy {
+  background: #dcfce7;
+  color: #166534;
+}
 
-/* Diagnosis Panel */
+.status-badge.at-risk {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* =====================================================
+   9. DIAGNOSIS PANEL
+   ===================================================== */
+.dashboard-content {
+  max-width: 900px;
+}
+
 .diagnosis-panel {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  background: #fff7ed;
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 28px;
   margin-bottom: 32px;
 }
 
 .diagnosis-header {
+  margin: 0 0 14px;
+  font-size: 15px;
   font-weight: 800;
   color: #92400e;
-  margin-bottom: 12px;
+}
+
+.primary-alert {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #78350f;
+  margin-bottom: 14px;
+}
+
+.tag-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .diag-tag {
-  background: white;
-  border: 1px solid #fde68a;
-  padding: 4px 10px;
-  border-radius: 6px;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 4px 12px;
   font-size: 12px;
   font-weight: 600;
-  margin-right: 8px;
+  color: #92400e;
+}
+
+/* =====================================================
+   10. ACTION SECTION
+   ===================================================== */
+.action-section {
+  margin-top: 8px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  color: var(--wa-text-title);
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.check-item input {
+  accent-color: var(--wa-teal);
+  transform: scale(0.9);
 }
