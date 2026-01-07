@@ -9,6 +9,7 @@
     "esbuild": "^0.18.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
     "archiver": "^6.0.2",
     "chart.js": "^4.5.0",
     "fs-extra": "^11.3.2",
