@@ -20,8 +20,8 @@
     "build:content": "esbuild src/content.ts --bundle --outfile=dist/content.js --platform=browser --format=iife --sourcemap --log-level=info",
     "build:background": "esbuild src/background.ts --bundle --outfile=dist/background.js --platform=browser --format=esm --sourcemap --log-level=info",
     "build:popup": "esbuild src/popup/popup.ts --bundle --outfile=dist/popup.js --platform=browser --format=esm --sourcemap --log-level=info",
-    "build:files": "mkdir -p dist && cp ./manifest.json ./dist/manifest.json && cp -R ./assets ./dist/assets && cp ./src/popup/popup.html ./src/popup/popup.css ./icon.png ./dist/ && mkdir -p dist/chapter-analytics/styles && cp src/chapter-analytics/styles/*.css dist/chapter-analytics/styles/",
-    "build": "rm -rf dist && mkdir -p dist && npm run build:files && npm run build:content && npm run build:background && npm run build:popup",
+    "build:files": "rm -rf dist && mkdir -p dist/auth && mkdir -p dist/chapter-analytics/styles && cp ./manifest.json ./dist/manifest.json && cp -R ./assets ./dist/assets && cp ./src/popup/popup.html ./src/popup/popup.css ./icon.png ./dist/ && cp src/chapter-analytics/styles/*.css dist/chapter-analytics/styles/ && cp src/auth/auth.css dist/auth/",
+    "build": "npm run build:files && npm run build:content && npm run build:background && npm run build:popup",
     "dev": "npm run build -- --watch",
     "clean": "rm -rf dist"
   }

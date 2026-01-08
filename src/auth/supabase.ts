@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // 🛑 Replace these with your actual values from Supabase Dashboard 
 // (Settings > API)
-const SUPABASE_URL = 'https://your-project-id.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-public-key';
+const SUPABASE_URL = "https://zxgsamzogtpaynecrgdr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4Z3NhbXpvZ3RwYXluZWNyZ2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg0NTczNjQsImV4cCI6MjA3NDAzMzM2NH0.Ys8Xa8dBrgcIEjSq1x0cmEsOzkGTcepCera4fwNAtwg";
 
 /**
  * CUSTOM STORAGE ADAPTER

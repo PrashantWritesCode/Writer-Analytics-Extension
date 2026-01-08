@@ -22,7 +22,9 @@
     "https://www.wattpad.com/*",
     "http://www.wattpad.com/*",
     "https://www.webnovel.com/*",
-    "http://www.webnovel.com/*"
+    "http://www.webnovel.com/*",
+    "https://*.supabase.co/*",
+    "https://zxgsamzogtpaynecrgdr.supabase.co"
   ],
 
   "background": {
