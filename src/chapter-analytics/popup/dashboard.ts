@@ -41,7 +41,9 @@ export async function initChapterDashboard(): Promise<void> {
   if (!dashboardContainer) return;
 
   // Check for an active Supabase session
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session) {
     // If no user, the Auth module takes over the container
@@ -51,10 +53,10 @@ export async function initChapterDashboard(): Promise<void> {
   } else {
     // Session exists: Fetch stories from Supabase
     const { data: stories, error } = await supabase
-      .from('tracked_stories')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .is('deleted_at', null);
+      .from("tracked_stories")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .is("deleted_at", null);
 
     if (error) console.error("Supabase Error:", error);
 
@@ -63,7 +65,7 @@ export async function initChapterDashboard(): Promise<void> {
       storyId: s.story_id,
       title: s.title,
       totalChapters: s.total_chapters,
-      lastUpdated: s.last_updated
+      lastUpdated: s.last_updated,
     }));
 
     renderChapterDashboard(dashboardContainer, trackedStoriesCache);
@@ -100,7 +102,11 @@ export function renderChapterDashboard(
       </h3>
 
       <section class="chapter-stories-list">
-        ${stories.length ? stories.map((s) => `
+        ${
+          stories.length
+            ? stories
+                .map(
+                  (s) => `
           <article class="story-list-card" data-story-id="${s.storyId}">
             <div class="story-info-left">
               <h4 class="story-title">
@@ -118,12 +124,16 @@ export function renderChapterDashboard(
               </button>
             </div>
           </article>
-        `).join("") : `
+        `
+                )
+                .join("")
+            : `
           <div class="chapter-empty-state">
             <p>No stories tracked yet</p>
             <span>Open a Wattpad story and click Track Story</span>
           </div>
-        `}
+        `
+        }
       </section>
     </div>
   `;
@@ -135,37 +145,46 @@ export function renderChapterDashboard(
    3. LIST VIEW EVENTS
 --------------------------------------------- */
 function attachListEventListeners(container: HTMLElement) {
-  const trackBtn = container.querySelector("#chapter-track-story-btn") as HTMLButtonElement;
+  const trackBtn = container.querySelector(
+    "#chapter-track-story-btn"
+  ) as HTMLButtonElement;
   if (trackBtn) trackBtn.onclick = () => handleTrackStoryClick();
 
-  container.querySelectorAll<HTMLButtonElement>(".update-btn").forEach((btn) => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      const storyId = btn.dataset.storyId!;
-      btn.innerHTML = `<span class="sync-icon spinning">↻</span> Updating...`;
-      chrome.runtime.sendMessage({ type: "UPDATE_CHAPTER_STATS", storyId });
-    };
-  });
+  container
+    .querySelectorAll<HTMLButtonElement>(".update-btn")
+    .forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const storyId = btn.dataset.storyId!;
+        btn.innerHTML = `<span class="sync-icon spinning">↻</span> Updating...`;
+        chrome.runtime.sendMessage({ type: "UPDATE_CHAPTER_STATS", storyId });
+      };
+    });
 
   const openDashboard = async (storyId: string) => {
     const snapshots = await getSupabaseSnapshots(storyId);
     const story = trackedStoriesCache.find((s) => s.storyId === storyId);
-    
+
     if (!story || !snapshots || snapshots.length === 0) {
       alert("No data synced yet. Please click 'Update' to fetch stats.");
       return;
     }
-    
+
     renderStoryDashboard(container, story, snapshots);
   };
 
   container.querySelectorAll<HTMLButtonElement>(".view-btn").forEach((btn) => {
-    btn.onclick = (e) => { e.stopPropagation(); openDashboard(btn.dataset.storyId!); };
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      openDashboard(btn.dataset.storyId!);
+    };
   });
 
-  container.querySelectorAll<HTMLDivElement>(".story-list-card").forEach((card) => {
-    card.onclick = () => openDashboard(card.dataset.storyId!);
-  });
+  container
+    .querySelectorAll<HTMLDivElement>(".story-list-card")
+    .forEach((card) => {
+      card.onclick = () => openDashboard(card.dataset.storyId!);
+    });
 }
 
 /* ---------------------------------------------
@@ -189,14 +208,20 @@ export function renderStoryDashboard(
           <div class="dashboard-header-left">
             <button class="chapter-back-btn">← Back to Stories</button>
             <div class="story-context">
-              <h2 class="chapter-story-title-display">${story.title} <span class="verified-check">✓</span></h2>
+              <h2 class="chapter-story-title-display">${
+                story.title
+              } <span class="verified-check">✓</span></h2>
               <p class="chapter-story-meta-display">
-                ${story.totalChapters} chapters • Updated ${new Date(story.lastUpdated).toLocaleDateString()}
+                ${story.totalChapters} chapters • Updated ${new Date(
+    story.lastUpdated
+  ).toLocaleDateString()}
               </p>
             </div>
           </div>
           <div class="dashboard-header-right">
-            <button class="story-btn view-btn update-sync-btn" data-story-id="${story.storyId}">↻ Sync Latest Stats</button>
+            <button class="story-btn view-btn update-sync-btn" data-story-id="${
+              story.storyId
+            }">↻ Sync Latest Stats</button>
           </div>
         </header>
 
@@ -206,7 +231,9 @@ export function renderStoryDashboard(
               <span class="card-label">Reader Retention</span>
               <div class="card-value">${retention.value}%</div>
               <span class="card-subtext">reach final chapter</span>
-              <span class="status-badge ${retention.status.toLowerCase().replace(" ", "-")}">${retention.status}</span>
+              <span class="status-badge ${retention.status
+                .toLowerCase()
+                .replace(" ", "-")}">${retention.status}</span>
             </article>
             <article class="insight-card">
               <span class="card-label">Biggest Drop-off</span>
@@ -230,8 +257,14 @@ export function renderStoryDashboard(
           <section class="diagnosis-panel">
             <h3 class="diagnosis-header">⚠ Intelligence Diagnosis</h3>
             <p class="primary-alert">${diagnosis.primaryAlert}</p>
-            <div class="tag-row">${diagnosis.tags.map((tag: string) => `<span class="diag-tag">${tag}</span>`).join("")}</div>
-            ${diagnosis.recoveryChapter ? `<p class="recovery-text">Momentum recovers at <strong>${diagnosis.recoveryChapter}</strong></p>` : ""}
+            <div class="tag-row">${diagnosis.tags
+              .map((tag: string) => `<span class="diag-tag">${tag}</span>`)
+              .join("")}</div>
+            ${
+              diagnosis.recoveryChapter
+                ? `<p class="recovery-text">Momentum recovers at <strong>${diagnosis.recoveryChapter}</strong></p>`
+                : ""
+            }
           </section>
 
           <section class="action-section">
@@ -239,7 +272,9 @@ export function renderStoryDashboard(
             <div class="checklist">
               <label class="check-item">
                 <input type="checkbox" />
-                <span>Rewrite <strong>${dropOff.chapterLabel}</strong> to reduce drop-off</span>
+                <span>Rewrite <strong>${
+                  dropOff.chapterLabel
+                }</strong> to reduce drop-off</span>
               </label>
               <label class="check-item">
                 <input type="checkbox" />
@@ -252,9 +287,13 @@ export function renderStoryDashboard(
     </div>
   `;
 
-  (container.querySelector(".chapter-back-btn") as HTMLElement).onclick = () => initChapterDashboard();
+  (container.querySelector(".chapter-back-btn") as HTMLElement).onclick = () =>
+    initChapterDashboard();
   (container.querySelector(".update-sync-btn") as HTMLElement).onclick = () => {
-    chrome.runtime.sendMessage({ type: "UPDATE_CHAPTER_STATS", storyId: story.storyId });
+    chrome.runtime.sendMessage({
+      type: "UPDATE_CHAPTER_STATS",
+      storyId: story.storyId,
+    });
   };
 }
 
@@ -262,7 +301,9 @@ export function renderStoryDashboard(
    5. TRACK STORY (The Gated Logic)
 --------------------------------------------- */
 export async function handleTrackStoryClick(): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) {
     alert("Please log in to track stories.");
     return;
@@ -272,13 +313,15 @@ export async function handleTrackStoryClick(): Promise<void> {
 
   // TIER GUARD: Check limit of 2 stories in Supabase
   const { count } = await supabase
-    .from('tracked_stories')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .is('deleted_at', null);
+    .from("tracked_stories")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("deleted_at", null);
 
   if (count !== null && count >= FREE_TRACKING_LIMIT) {
-    alert("Chapter Analytics (Beta): Free plan includes tracking up to 2 stories. Upgrade to unlock unlimited tracking.");
+    alert(
+      "Chapter Analytics (Beta): Free plan includes tracking up to 2 stories. Upgrade to unlock unlimited tracking."
+    );
     return;
   }
 
@@ -291,14 +334,25 @@ export async function handleTrackStoryClick(): Promise<void> {
       func: () => {
         const storyId = window.location.href.match(/story\/(\d+)/)?.[1] ?? null;
         if (!storyId) return null;
-        const title = document.querySelector(".gF-N5")?.textContent?.trim() || document.querySelector("h1")?.textContent?.trim() || "Untitled Story";
+        const title =
+          document.querySelector(".gF-N5")?.textContent?.trim() ||
+          document.querySelector("h1")?.textContent?.trim() ||
+          "Untitled Story";
         const tocRoot = document.querySelector('div[data-testid="toc"]');
         if (!tocRoot) return null;
-        const anchors = Array.from(tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a'));
+        const anchors = Array.from(
+          tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a')
+        );
         const chapters = anchors.map((a: any, i: number) => ({
-          chapterId: a.href.split("/").pop().match(/^(\d+)/)?.[1] || `chapter-${i+1}`,
+          chapterId:
+            a.href
+              .split("/")
+              .pop()
+              .match(/^(\d+)/)?.[1] || `chapter-${i + 1}`,
           chapterUrl: a.href,
-          chapterTitle: a.querySelector(".wpYp-")?.textContent?.trim() || `Chapter ${i+1}`,
+          chapterTitle:
+            a.querySelector(".wpYp-")?.textContent?.trim() ||
+            `Chapter ${i + 1}`,
         }));
         return { storyId, title, chapters };
       },
@@ -306,16 +360,45 @@ export async function handleTrackStoryClick(): Promise<void> {
 
     if (!result || !result.storyId) return;
 
-    // SAVE TO SUPABASE
-    const { error } = await supabase.from('tracked_stories').upsert({
+    // 1. Save the Master Story Record
+    const { error: storyError } = await supabase.from("tracked_stories").upsert(
+      {
+        user_id: userId,
+        story_id: result.storyId,
+        title: result.title,
+        total_chapters: result.chapters.length,
+        last_updated: new Date().toISOString(),
+        deleted_at: null, // 🔥 Important: This "undeletes" the story if it was previously removed
+      },
+      { onConflict: "user_id, story_id" } // 🔥 Tell the DB to look for this pair
+    );
+
+    if (storyError) {
+      alert("Error saving story: " + storyError.message);
+      return;
+    }
+
+    // 2. 🔥 THE FIX: Save all extracted chapters to the database
+    const chaptersToStore = result.chapters.map((ch: any, index: number) => ({
       user_id: userId,
       story_id: result.storyId,
-      title: result.title,
-      total_chapters: result.chapters.length,
-      last_updated: new Date().toISOString()
-    });
+      chapter_id: ch.chapterId,
+      title: ch.chapterTitle,
+      url: ch.chapterUrl, // Saving the URL for background.ts
+      sequence_order: index,
+    }));
 
-    if (!error) initChapterDashboard();
+    // Update the chapter upsert in dashboard.ts as well
+    const { error: chaptersError } = await supabase
+      .from("story_chapters")
+      .upsert(chaptersToStore, { onConflict: "story_id, chapter_id" });
+
+    if (!chaptersError) {
+      console.log(`✅ ${result.chapters.length} chapters mapped in DB.`);
+      initChapterDashboard();
+    } else {
+      console.error("Error saving chapters:", chaptersError.message);
+    }
   });
 }
 
@@ -323,15 +406,17 @@ export async function handleTrackStoryClick(): Promise<void> {
    6. DATABASE HELPERS (Replacement for getSnapshot)
 --------------------------------------------- */
 async function getSupabaseSnapshots(storyId: string) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) return null;
 
   const { data, error } = await supabase
-    .from('chapter_snapshots')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .eq('story_id', storyId)
-    .order('captured_at', { ascending: false });
+    .from("chapter_snapshots")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .eq("story_id", storyId)
+    .order("captured_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching snapshots:", error);

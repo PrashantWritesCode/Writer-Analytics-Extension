@@ -19973,7 +19973,9 @@ async function initChapterDashboard() {
   dashboardContainer = document.getElementById("chapter-dashboard");
   if (!dashboardContainer)
     return;
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
   if (!session) {
     renderLoginScreen(dashboardContainer, () => {
       initChapterDashboard();
@@ -20015,7 +20017,8 @@ function renderChapterDashboard(container, stories = []) {
       </h3>
 
       <section class="chapter-stories-list">
-        ${stories.length ? stories.map((s) => `
+        ${stories.length ? stories.map(
+    (s) => `
           <article class="story-list-card" data-story-id="${s.storyId}">
             <div class="story-info-left">
               <h4 class="story-title">
@@ -20033,7 +20036,8 @@ function renderChapterDashboard(container, stories = []) {
               </button>
             </div>
           </article>
-        `).join("") : `
+        `
+  ).join("") : `
           <div class="chapter-empty-state">
             <p>No stories tracked yet</p>
             <span>Open a Wattpad story and click Track Story</span>
@@ -20045,7 +20049,9 @@ function renderChapterDashboard(container, stories = []) {
   attachListEventListeners(container);
 }
 function attachListEventListeners(container) {
-  const trackBtn = container.querySelector("#chapter-track-story-btn");
+  const trackBtn = container.querySelector(
+    "#chapter-track-story-btn"
+  );
   if (trackBtn)
     trackBtn.onclick = () => handleTrackStoryClick();
   container.querySelectorAll(".update-btn").forEach((btn) => {
@@ -20090,7 +20096,9 @@ function renderStoryDashboard(container, story, chapters) {
             <div class="story-context">
               <h2 class="chapter-story-title-display">${story.title} <span class="verified-check">\u2713</span></h2>
               <p class="chapter-story-meta-display">
-                ${story.totalChapters} chapters \u2022 Updated ${new Date(story.lastUpdated).toLocaleDateString()}
+                ${story.totalChapters} chapters \u2022 Updated ${new Date(
+    story.lastUpdated
+  ).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -20152,11 +20160,16 @@ function renderStoryDashboard(container, story, chapters) {
   `;
   container.querySelector(".chapter-back-btn").onclick = () => initChapterDashboard();
   container.querySelector(".update-sync-btn").onclick = () => {
-    chrome.runtime.sendMessage({ type: "UPDATE_CHAPTER_STATS", storyId: story.storyId });
+    chrome.runtime.sendMessage({
+      type: "UPDATE_CHAPTER_STATS",
+      storyId: story.storyId
+    });
   };
 }
 async function handleTrackStoryClick() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
   if (!session) {
     alert("Please log in to track stories.");
     return;
@@ -20164,7 +20177,9 @@ async function handleTrackStoryClick() {
   const userId = session.user.id;
   const { count } = await supabase.from("tracked_stories").select("*", { count: "exact", head: true }).eq("user_id", userId).is("deleted_at", null);
   if (count !== null && count >= FREE_TRACKING_LIMIT) {
-    alert("Chapter Analytics (Beta): Free plan includes tracking up to 2 stories. Upgrade to unlock unlimited tracking.");
+    alert(
+      "Chapter Analytics (Beta): Free plan includes tracking up to 2 stories. Upgrade to unlock unlimited tracking."
+    );
     return;
   }
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -20181,7 +20196,9 @@ async function handleTrackStoryClick() {
         const tocRoot = document.querySelector('div[data-testid="toc"]');
         if (!tocRoot)
           return null;
-        const anchors = Array.from(tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a'));
+        const anchors = Array.from(
+          tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a')
+        );
         const chapters = anchors.map((a, i) => ({
           chapterId: a.href.split("/").pop().match(/^(\d+)/)?.[1] || `chapter-${i + 1}`,
           chapterUrl: a.href,
@@ -20192,19 +20209,45 @@ async function handleTrackStoryClick() {
     });
     if (!result || !result.storyId)
       return;
-    const { error } = await supabase.from("tracked_stories").upsert({
+    const { error: storyError } = await supabase.from("tracked_stories").upsert(
+      {
+        user_id: userId,
+        story_id: result.storyId,
+        title: result.title,
+        total_chapters: result.chapters.length,
+        last_updated: (/* @__PURE__ */ new Date()).toISOString(),
+        deleted_at: null
+        // 🔥 Important: This "undeletes" the story if it was previously removed
+      },
+      { onConflict: "user_id, story_id" }
+      // 🔥 Tell the DB to look for this pair
+    );
+    if (storyError) {
+      alert("Error saving story: " + storyError.message);
+      return;
+    }
+    const chaptersToStore = result.chapters.map((ch, index) => ({
       user_id: userId,
       story_id: result.storyId,
-      title: result.title,
-      total_chapters: result.chapters.length,
-      last_updated: (/* @__PURE__ */ new Date()).toISOString()
-    });
-    if (!error)
+      chapter_id: ch.chapterId,
+      title: ch.chapterTitle,
+      url: ch.chapterUrl,
+      // Saving the URL for background.ts
+      sequence_order: index
+    }));
+    const { error: chaptersError } = await supabase.from("story_chapters").upsert(chaptersToStore, { onConflict: "story_id, chapter_id" });
+    if (!chaptersError) {
+      console.log(`\u2705 ${result.chapters.length} chapters mapped in DB.`);
       initChapterDashboard();
+    } else {
+      console.error("Error saving chapters:", chaptersError.message);
+    }
   });
 }
 async function getSupabaseSnapshots(storyId) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
   if (!session)
     return null;
   const { data, error } = await supabase.from("chapter_snapshots").select("*").eq("user_id", session.user.id).eq("story_id", storyId).order("captured_at", { ascending: false });

@@ -6,7 +6,7 @@
  * - background.ts must NOT intercept CHAPTER_* messages
  */
 
-import { appendChapterStat } from "./chapter-analytics/storage/chapterStorage";
+import { supabase } from "./auth/supabase";
 
 // helpers
 function loadAll(): Promise<Record<string, any>> {
@@ -158,74 +158,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       /* --- CHAPTER ANALYTICS UPDATE LOOP --- */
       if (message.type === "UPDATE_CHAPTER_STATS") {
-        const { storyId } = message;
-
-        (async () => {
-          try {
-            const snapshotKey = `chapterAnalytics.snapshots.${storyId}`;
-            const data = await chrome.storage.local.get(snapshotKey);
-            const snapshot = data?.[snapshotKey];
-
-            if (!snapshot?.chapters) return;
-
-            for (const chapter of snapshot.chapters) {
-              if (!chapter.chapterUrl) continue;
-
-              let tab = await chrome.tabs.create({
-                url: chapter.chapterUrl,
-                active: false,
-              });
-
-              // 1. Wait for tab to be fully loaded
-              await new Promise<void>((resolve) => {
-                const listener = (id: number, info: any) => {
-                  if (id === tab.id && info.status === "complete") {
-                    chrome.tabs.onUpdated.removeListener(listener);
-                    resolve();
-                  }
-                };
-                chrome.tabs.onUpdated.addListener(listener);
-              });
-
-              // 2. Inject content script
-              await chrome.scripting.executeScript({
-                target: { tabId: tab.id! },
-                files: ["content.js"],
-              });
-
-              // 3. THE HANDSHAKE: Await the response from the content script
-              // This ensures the content script finishes waitForChapterStats() and storage.set()
-              try {
-                await chrome.tabs.sendMessage(tab.id!, {
-                  type: "SCRAPE_CHAPTER_STATS",
-                  storyId: storyId,
-                  chapterId: chapter.chapterId,
-                });
-                console.log(`✅ Chapter ${chapter.chapterId} processed.`);
-              } catch (msgErr) {
-                console.warn(
-                  `⚠️ Failed to get response from chapter ${chapter.chapterId}:`,
-                  msgErr
-                );
-              }
-
-              // 4. Small buffer to allow Chrome to settle its storage sync
-              await new Promise((r) => setTimeout(r, 500));
-
-              // 5. Safe to remove tab now
-              await chrome.tabs.remove(tab.id!).catch(() => {});
-            }
-
-            // 🏁 Aggregation: Map the temporary keys into the main snapshot history
-            await finalizeChapterHistoryMapping(storyId);
-
-            console.log("🏁 All chapters scraped and history updated.");
-          } catch (err) {
-            console.error("Decoupled Loop Error:", err);
-          }
-        })();
-
-        sendResponse({ success: true, status: "Processing" });
+        // We return 'true' at the bottom to keep the port open for async
+        handleChapterSyncFlow(message.storyId, sendResponse);
         return true;
       }
 
@@ -243,46 +177,101 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // background.ts
-async function finalizeChapterHistoryMapping(storyId: string) {
-  const snapshotKey = `chapterAnalytics.snapshots.${storyId}`;
-  const allData = await chrome.storage.local.get(null);
-  const snapshot = allData[snapshotKey];
+// --- CORE CHAPTER SYNC LOGIC ---
+async function handleChapterSyncFlow(storyId: string, sendResponse: (resp: any) => void) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Please log in to update stats.");
 
-  if (!snapshot || !snapshot.chapters) return;
-
-  const keysToRemove: string[] = [];
-
-  snapshot.chapters = snapshot.chapters.map((chapter: any) => {
-    // This MUST match the key created in content.ts
-    const lookupKey = `temp_chapter_stats_${storyId}_${chapter.chapterId}`;
-    const freshStats = allData[lookupKey];
-
-    if (freshStats) {
-      if (!chapter.statHistory) chapter.statHistory = [];
-
-      // PUSH the data into the history array
-      chapter.statHistory.push({
-        reads: freshStats.reads,
-        votes: freshStats.votes,
-        comments: freshStats.comments,
-        createdAt: freshStats.capturedAt, // Matches your screenshot key 'createdAt'
-      });
-
-      // Update current values for the UI
-      chapter.reads = freshStats.reads;
-      chapter.votes = freshStats.votes;
-      chapter.comments = freshStats.comments;
-
-      keysToRemove.push(lookupKey);
+    // 1. GUARD: Check the URL before doing anything
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://")) {
+      throw new Error("Cannot access a chrome:// URL. Please stay on Wattpad.");
     }
-    return chapter;
+
+    // Story master check
+    const { data: storyData } = await supabase.from("tracked_stories").select("total_chapters").eq("story_id", storyId).single();
+    if (!storyData) throw new Error("Story not found in database.");
+
+    // Respond to popup so it can show "Processing..."
+    sendResponse({ success: true, status: "Processing" });
+
+    // Start the heavy lifting
+    await runScrapeLoop(storyId, session.user.id);
+
+  } catch (err: any) {
+    console.error("Sync Flow Error:", err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function runScrapeLoop(storyId: string, userId: string) {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!activeTab?.id) return;
+
+  // Scrape chapter list from current page
+  const [{ result }] = await chrome.scripting.executeScript({
+    target: { tabId: activeTab.id },
+    func: () => {
+      const anchors = Array.from(document.querySelectorAll('ul[aria-label="story-parts"] li a'));
+      return anchors.map((a: any, i: number) => ({
+        chapterId: a.href.split("/").pop().match(/^(\d+)/)?.[1] || `ch-${i}`,
+        url: a.href,
+      }));
+    },
   });
 
-  // Save the updated master snapshot back to DB
-  await chrome.storage.local.set({ [snapshotKey]: snapshot });
+  if (!result || !result.length) return;
 
-  // Clean up the temporary keys
-  await chrome.storage.local.remove(keysToRemove);
+  for (const ch of result) {
+    let tab = await chrome.tabs.create({ url: ch.url, active: false });
 
-  console.log(`✅ Mapping complete. StatHistory updated for ${storyId}`);
+    await new Promise<void>((res) => {
+      const listener = (id: number, info: any) => {
+        if (id === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          res();
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+    });
+
+    const [{ result: stats }] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id! },
+      func: () => {
+        const reads = document.querySelector(".icon-read + span")?.textContent || "0";
+        const votes = document.querySelector(".icon-vote + span")?.textContent || "0";
+        const comments = document.querySelector(".icon-comment + span")?.textContent || "0";
+        return {
+          reads: parseInt(reads.replace(/,/g, "")),
+          votes: parseInt(votes.replace(/,/g, "")),
+          comments: parseInt(comments.replace(/,/g, "")),
+        };
+      },
+    });
+
+    if (stats) {
+      await supabase.from("chapter_snapshots").upsert({
+        user_id: userId,
+        story_id: storyId,
+        chapter_id: ch.chapterId,
+        reads: stats.reads,
+        votes: stats.votes,
+        comments: stats.comments,
+        captured_at: new Date().toISOString(),
+      });
+    }
+
+    await chrome.tabs.remove(tab.id!);
+    await new Promise((r) => setTimeout(r, 800));
+  }
+
+  // Update Master Timestamp
+  await supabase.from("tracked_stories").update({ last_updated: new Date().toISOString() }).eq("story_id", storyId);
+
+  // 🔥 SAFE NOTIFY: Try to tell the popup we are done
+  // If the user closed the popup, this .catch() will prevent the error from showing up
+  chrome.runtime.sendMessage({ type: "STATS_UPDATED_SUCCESS", storyId }).catch(() => {
+    console.log("Popup closed; sync completed silently.");
+  });
 }
