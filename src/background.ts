@@ -176,102 +176,136 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-// background.ts
 // --- CORE CHAPTER SYNC LOGIC ---
+
+// --- 3. BRIDGE FUNCTION ---
 async function handleChapterSyncFlow(storyId: string, sendResponse: (resp: any) => void) {
   try {
+    // Check Auth
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Please log in to update stats.");
-
-    // 1. GUARD: Check the URL before doing anything
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://")) {
-      throw new Error("Cannot access a chrome:// URL. Please stay on Wattpad.");
+    if (!session) {
+      sendResponse({ success: false, error: "Please log in." });
+      return;
     }
 
-    // Story master check
-    const { data: storyData } = await supabase.from("tracked_stories").select("total_chapters").eq("story_id", storyId).single();
-    if (!storyData) throw new Error("Story not found in database.");
+    // Check Story
+    const { data: storyData } = await supabase.from("tracked_stories")
+      .select("total_chapters")
+      .eq("story_id", storyId)
+      .single();
 
-    // Respond to popup so it can show "Processing..."
-    sendResponse({ success: true, status: "Processing" });
+    if (!storyData) {
+      sendResponse({ success: false, error: "Story not found." });
+      return;
+    }
 
-    // Start the heavy lifting
-    await runScrapeLoop(storyId, session.user.id);
+    // Respond Success Immediately
+    sendResponse({ success: true, status: "Processing started" });
+    
+    // Start the Native Loop
+    await runNativeScrapeLoop(storyId, session.user.id);
 
   } catch (err: any) {
     console.error("Sync Flow Error:", err);
-    sendResponse({ success: false, error: err.message });
   }
 }
 
-async function runScrapeLoop(storyId: string, userId: string) {
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!activeTab?.id) return;
+// --- 4. THE NATIVE SCRAPE LOOP ---
 
-  // Scrape chapter list from current page
-  const [{ result }] = await chrome.scripting.executeScript({
-    target: { tabId: activeTab.id },
-    func: () => {
-      const anchors = Array.from(document.querySelectorAll('ul[aria-label="story-parts"] li a'));
-      return anchors.map((a: any, i: number) => ({
-        chapterId: a.href.split("/").pop().match(/^(\d+)/)?.[1] || `ch-${i}`,
-        url: a.href,
-      }));
-    },
-  });
+async function runNativeScrapeLoop(storyId: string, userId: string) {
+  const { data: chapters } = await supabase
+    .from('story_chapters')
+    .select('chapter_id, url')
+    .eq('story_id', storyId)
+    .order('sequence_order', { ascending: true });
 
-  if (!result || !result.length) return;
+  if (!chapters || chapters.length === 0) return;
 
-  for (const ch of result) {
+  console.log(`[Background] Syncing ${chapters.length} chapters via Native Flow...`);
+
+  for (const ch of chapters) {
+    if (!ch.url) continue;
+
+    // 1. Calculate the Key
+    // Logic: Split URL by "/" and take the last part (the slug)
+    const slug = ch.url.split("/").pop()?.split("?")[0] || ""; 
+    const storageKey = `writerAnalyticsStats-${slug}`;
+
+    // 2. Clear old data
+    await chrome.storage.local.remove(storageKey);
+
+    // 3. Open Tab
     let tab = await chrome.tabs.create({ url: ch.url, active: false });
 
-    await new Promise<void>((res) => {
-      const listener = (id: number, info: any) => {
-        if (id === tab.id && info.status === "complete") {
-          chrome.tabs.onUpdated.removeListener(listener);
-          res();
-        }
-      };
-      chrome.tabs.onUpdated.addListener(listener);
-    });
-
-    const [{ result: stats }] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id! },
-      func: () => {
-        const reads = document.querySelector(".icon-read + span")?.textContent || "0";
-        const votes = document.querySelector(".icon-vote + span")?.textContent || "0";
-        const comments = document.querySelector(".icon-comment + span")?.textContent || "0";
-        return {
-          reads: parseInt(reads.replace(/,/g, "")),
-          votes: parseInt(votes.replace(/,/g, "")),
-          comments: parseInt(comments.replace(/,/g, "")),
-        };
-      },
-    });
+    // 4. Wait for Native Stats
+    const stats = await waitForNativeStats(storageKey, tab.id!);
 
     if (stats) {
-      await supabase.from("chapter_snapshots").upsert({
+      console.log(`✅ [${ch.chapter_id}] Captured: Reads=${stats.reads}`);
+      
+      // --- DEBUG: DB INSERT WITH LOGGING ---
+      const payload = {
         user_id: userId,
         story_id: storyId,
-        chapter_id: ch.chapterId,
-        reads: stats.reads,
-        votes: stats.votes,
-        comments: stats.comments,
-        captured_at: new Date().toISOString(),
-      });
+        chapter_id: ch.chapter_id,
+        reads: stats.reads || 0,
+        votes: stats.votes || 0,
+        comments: stats.headerComments || 0,
+        captured_at: new Date().toISOString()
+      };
+
+      console.log("Attempting DB Insert:", payload);
+
+      const { error } = await supabase
+        .from("chapter_snapshots").insert(payload);
+
+      if (error) {
+        console.error(`❌ SUPABASE ERROR [${ch.chapter_id}]:`, error.message, error.details || "");
+      } else {
+        console.log(`💾 DB Success for ${ch.chapter_id}`);
+      }
+      // -------------------------------------
+
+    } else {
+      console.warn(`❌ [${ch.chapter_id}] Timed out (content.ts didn't save).`);
     }
 
-    await chrome.tabs.remove(tab.id!);
-    await new Promise((r) => setTimeout(r, 800));
+    // 5. Close Tab
+    await chrome.tabs.remove(tab.id!).catch(() => {});
+    
+    // Small buffer before next tab
+    await new Promise(r => setTimeout(r, 1000));
   }
 
-  // Update Master Timestamp
-  await supabase.from("tracked_stories").update({ last_updated: new Date().toISOString() }).eq("story_id", storyId);
-
-  // 🔥 SAFE NOTIFY: Try to tell the popup we are done
-  // If the user closed the popup, this .catch() will prevent the error from showing up
-  chrome.runtime.sendMessage({ type: "STATS_UPDATED_SUCCESS", storyId }).catch(() => {
-    console.log("Popup closed; sync completed silently.");
+  // Final Cleanup
+  await supabase.from("tracked_stories")
+    .update({ last_updated: new Date().toISOString() })
+    .eq("story_id", storyId);
+    
+  // Silence "Receiving end" error
+  chrome.runtime.sendMessage({ type: "STATS_UPDATED_SUCCESS", storyId }, () => {
+     if (chrome.runtime.lastError) { /* ignore */ }
   });
+}
+
+// --- 5. NATIVE POLLER ---
+async function waitForNativeStats(key: string, tabId: number): Promise<any> {
+  let attempts = 0;
+  // content.ts takes ~1.5s to fire. We wait up to 10s.
+  while (attempts < 10) { 
+    const data = await new Promise<any>((resolve) => {
+      chrome.storage.local.get(key, (res) => resolve(res[key]));
+    });
+
+    if (data) {
+      // If we see data, return it!
+      // (Optional: You can add a check here to wait if reads === 0)
+      return data;
+    }
+
+    // Wait 1s and check again
+    await new Promise(r => setTimeout(r, 1000));
+    attempts++;
+  }
+  return null;
 }

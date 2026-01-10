@@ -12014,79 +12014,77 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleChapterSyncFlow(storyId, sendResponse) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session)
-      throw new Error("Please log in to update stats.");
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://")) {
-      throw new Error("Cannot access a chrome:// URL. Please stay on Wattpad.");
+    if (!session) {
+      sendResponse({ success: false, error: "Please log in." });
+      return;
     }
     const { data: storyData } = await supabase.from("tracked_stories").select("total_chapters").eq("story_id", storyId).single();
-    if (!storyData)
-      throw new Error("Story not found in database.");
-    sendResponse({ success: true, status: "Processing" });
-    await runScrapeLoop(storyId, session.user.id);
+    if (!storyData) {
+      sendResponse({ success: false, error: "Story not found." });
+      return;
+    }
+    sendResponse({ success: true, status: "Processing started" });
+    await runNativeScrapeLoop(storyId, session.user.id);
   } catch (err) {
     console.error("Sync Flow Error:", err);
-    sendResponse({ success: false, error: err.message });
   }
 }
-async function runScrapeLoop(storyId, userId) {
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!activeTab?.id)
+async function runNativeScrapeLoop(storyId, userId) {
+  const { data: chapters } = await supabase.from("story_chapters").select("chapter_id, url").eq("story_id", storyId).order("sequence_order", { ascending: true });
+  if (!chapters || chapters.length === 0)
     return;
-  const [{ result }] = await chrome.scripting.executeScript({
-    target: { tabId: activeTab.id },
-    func: () => {
-      const anchors = Array.from(document.querySelectorAll('ul[aria-label="story-parts"] li a'));
-      return anchors.map((a, i) => ({
-        chapterId: a.href.split("/").pop().match(/^(\d+)/)?.[1] || `ch-${i}`,
-        url: a.href
-      }));
-    }
-  });
-  if (!result || !result.length)
-    return;
-  for (const ch of result) {
+  console.log(`[Background] Syncing ${chapters.length} chapters via Native Flow...`);
+  for (const ch of chapters) {
+    if (!ch.url)
+      continue;
+    const slug = ch.url.split("/").pop()?.split("?")[0] || "";
+    const storageKey = `writerAnalyticsStats-${slug}`;
+    await chrome.storage.local.remove(storageKey);
     let tab = await chrome.tabs.create({ url: ch.url, active: false });
-    await new Promise((res) => {
-      const listener = (id, info) => {
-        if (id === tab.id && info.status === "complete") {
-          chrome.tabs.onUpdated.removeListener(listener);
-          res();
-        }
-      };
-      chrome.tabs.onUpdated.addListener(listener);
-    });
-    const [{ result: stats }] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        const reads = document.querySelector(".icon-read + span")?.textContent || "0";
-        const votes = document.querySelector(".icon-vote + span")?.textContent || "0";
-        const comments = document.querySelector(".icon-comment + span")?.textContent || "0";
-        return {
-          reads: parseInt(reads.replace(/,/g, "")),
-          votes: parseInt(votes.replace(/,/g, "")),
-          comments: parseInt(comments.replace(/,/g, ""))
-        };
-      }
-    });
+    const stats = await waitForNativeStats(storageKey, tab.id);
     if (stats) {
-      await supabase.from("chapter_snapshots").upsert({
+      console.log(`\u2705 [${ch.chapter_id}] Captured: Reads=${stats.reads}`);
+      const payload = {
         user_id: userId,
         story_id: storyId,
-        chapter_id: ch.chapterId,
-        reads: stats.reads,
-        votes: stats.votes,
-        comments: stats.comments,
+        chapter_id: ch.chapter_id,
+        reads: stats.reads || 0,
+        votes: stats.votes || 0,
+        comments: stats.headerComments || 0,
         captured_at: (/* @__PURE__ */ new Date()).toISOString()
-      });
+      };
+      console.log("Attempting DB Insert:", payload);
+      const { error } = await supabase.from("chapter_snapshots").insert(payload);
+      if (error) {
+        console.error(`\u274C SUPABASE ERROR [${ch.chapter_id}]:`, error.message, error.details || "");
+      } else {
+        console.log(`\u{1F4BE} DB Success for ${ch.chapter_id}`);
+      }
+    } else {
+      console.warn(`\u274C [${ch.chapter_id}] Timed out (content.ts didn't save).`);
     }
-    await chrome.tabs.remove(tab.id);
-    await new Promise((r) => setTimeout(r, 800));
+    await chrome.tabs.remove(tab.id).catch(() => {
+    });
+    await new Promise((r) => setTimeout(r, 1e3));
   }
   await supabase.from("tracked_stories").update({ last_updated: (/* @__PURE__ */ new Date()).toISOString() }).eq("story_id", storyId);
-  chrome.runtime.sendMessage({ type: "STATS_UPDATED_SUCCESS", storyId }).catch(() => {
-    console.log("Popup closed; sync completed silently.");
+  chrome.runtime.sendMessage({ type: "STATS_UPDATED_SUCCESS", storyId }, () => {
+    if (chrome.runtime.lastError) {
+    }
   });
+}
+async function waitForNativeStats(key, tabId) {
+  let attempts = 0;
+  while (attempts < 10) {
+    const data = await new Promise((resolve) => {
+      chrome.storage.local.get(key, (res) => resolve(res[key]));
+    });
+    if (data) {
+      return data;
+    }
+    await new Promise((r) => setTimeout(r, 1e3));
+    attempts++;
+  }
+  return null;
 }
 //# sourceMappingURL=background.js.map
