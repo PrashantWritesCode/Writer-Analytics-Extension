@@ -20245,17 +20245,35 @@ async function handleTrackStoryClick() {
   });
 }
 async function getSupabaseSnapshots(storyId) {
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session)
     return null;
-  const { data, error } = await supabase.from("chapter_snapshots").select("*").eq("user_id", session.user.id).eq("story_id", storyId).order("captured_at", { ascending: false });
-  if (error) {
-    console.error("Error fetching snapshots:", error);
+  const { data: chapters, error: chError } = await supabase.from("story_chapters").select("chapter_id, title, sequence_order").eq("story_id", storyId).order("sequence_order", { ascending: true });
+  if (chError || !chapters) {
+    console.error("Error fetching chapters:", chError);
     return null;
   }
-  return data;
+  const { data: snapshots, error: snapError } = await supabase.from("chapter_snapshots").select("*").eq("story_id", storyId).order("captured_at", { ascending: true });
+  if (snapError) {
+    console.error("Error fetching snapshots:", snapError);
+    return null;
+  }
+  return chapters.map((ch) => {
+    const myHistory = snapshots?.filter((s) => s.chapter_id === ch.chapter_id) || [];
+    return {
+      chapterId: ch.chapter_id,
+      chapterTitle: ch.title,
+      // Maps to 'c.chapterTitle' usage
+      sequence: ch.sequence_order,
+      // The Critical Part: 'statHistory'
+      statHistory: myHistory.map((h) => ({
+        reads: h.reads,
+        votes: h.votes,
+        comments: h.comments,
+        capturedAt: h.captured_at
+      }))
+    };
+  });
 }
 
 // src/popup/popup.ts
