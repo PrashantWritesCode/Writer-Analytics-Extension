@@ -7,12 +7,12 @@
 
 // Do not add any code changes besides the comment.
 
-
 import html2canvas from "html2canvas";
 import {
   handleTrackStoryClick,
   initChapterDashboard,
 } from "../chapter-analytics/popup/dashboard";
+import { trackStoryEvent } from "../common/analytics";
 
 // DEBUG-CHAPTER-ANALYTICS-LOG
 console.log("[popup] loading popup.js");
@@ -308,8 +308,23 @@ function refreshData(): void {
       loadCachedLatest().then(displayData);
       return;
     }
-    if (resp?.payload) displayData(resp.payload as StoryStats);
-    else loadCachedLatest().then(displayData);
+
+    // ✅ Logic Changed Here
+    if (resp?.payload) {
+      const stats = resp.payload as StoryStats;
+      displayData(stats);
+
+      // 🔍 TELEMETRY TRIGGER
+      // We found real data, so let's log that the user is analyzing this story
+      trackStoryEvent("viewed_story_analytics", {
+        title: stats.title || "Unknown Title",
+        author: stats.author || "Unknown Author",
+        source: "popup_refresh",
+      });
+    } else {
+      loadCachedLatest().then(displayData);
+    }
+
     showStatus("", false);
   });
 }

@@ -20287,6 +20287,39 @@ async function getSupabaseSnapshots(storyId) {
   });
 }
 
+// src/common/analytics.ts
+function getAnonymousId() {
+  const STORAGE_KEY2 = "wa_device_id";
+  let id = localStorage.getItem(STORAGE_KEY2);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(STORAGE_KEY2, id);
+  }
+  return id;
+}
+async function trackStoryEvent(eventName, metadata = {}) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id || null;
+    const anonId = getAnonymousId();
+    await supabase.from("feature_logs").insert({
+      user_id: userId,
+      // Column 1: Link to Auth Users (or NULL)
+      anonymous_id: anonId,
+      // Column 2: The persistent browser ID
+      event_name: eventName,
+      metadata: {
+        ...metadata,
+        platform: "wattpad",
+        captured_at: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    });
+    console.log(`[Telemetry] \u{1F4E1} Logged: ${eventName} (AnonID: ${anonId.slice(0, 4)}...)`);
+  } catch (error) {
+    console.warn("[Telemetry] Logging skipped:", error);
+  }
+}
+
 // src/popup/popup.ts
 console.log("[popup] loading popup.js");
 function $(id) {
@@ -20495,10 +20528,17 @@ function refreshData() {
       loadCachedLatest().then(displayData);
       return;
     }
-    if (resp?.payload)
-      displayData(resp.payload);
-    else
+    if (resp?.payload) {
+      const stats = resp.payload;
+      displayData(stats);
+      trackStoryEvent("viewed_story_analytics", {
+        title: stats.title || "Unknown Title",
+        author: stats.author || "Unknown Author",
+        source: "popup_refresh"
+      });
+    } else {
       loadCachedLatest().then(displayData);
+    }
     showStatus("", false);
   });
 }
