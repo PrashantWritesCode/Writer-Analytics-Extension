@@ -7,6 +7,7 @@ import {
   findFatigueStart,
 } from "../analytics/deriveMetrics";
 import { getStoryDiagnosis } from "../analytics/storyInsights";
+import { authService } from "../../auth/authService";
 
 /* ---------------------------------------------
    TYPES & CONSTANTS
@@ -36,31 +37,59 @@ let trackedStoriesCache: TrackedStory[] = [];
 /* ---------------------------------------------
    1. INIT (The Global Router)
 --------------------------------------------- */
+// export async function initChapterDashboard(): Promise<void> {
+//   dashboardContainer = document.getElementById("chapter-dashboard");
+//   if (!dashboardContainer) return;
+
+//   // Check for an active Supabase session
+//   const {
+//     data: { session },
+//   } = await supabase.auth.getSession();
+
+//   if (!session) {
+//     // If no user, the Auth module takes over the container
+//     renderLoginScreen(dashboardContainer, () => {
+//       initChapterDashboard(); // Success callback
+//     });
+//   } else {
+//     // Session exists: Fetch stories from Supabase
+//     const { data: stories, error } = await supabase
+//       .from("tracked_stories")
+//       .select("*")
+//       .eq("user_id", session.user.id)
+//       .is("deleted_at", null);
+
+//     if (error) console.error("Supabase Error:", error);
+
+//     // Sync DB snake_case to our production camelCase types
+//     trackedStoriesCache = (stories || []).map((s: any) => ({
+//       storyId: s.story_id,
+//       title: s.title,
+//       totalChapters: s.total_chapters,
+//       lastUpdated: s.last_updated,
+//     }));
+
+//     renderChapterDashboard(dashboardContainer, trackedStoriesCache);
+//   }
+// }
+
 export async function initChapterDashboard(): Promise<void> {
   dashboardContainer = document.getElementById("chapter-dashboard");
   if (!dashboardContainer) return;
 
-  // Check for an active Supabase session
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    // If no user, the Auth module takes over the container
-    renderLoginScreen(dashboardContainer, () => {
-      initChapterDashboard(); // Success callback
-    });
-  } else {
-    // Session exists: Fetch stories from Supabase
+  // 1. You call the centralized function
+  // 2. You MUST put (session) here to "catch" the data from the service
+  await authService.ensureAuth(dashboardContainer, async (session:any) => {
+    
+    // Now 'session' is defined and the error goes away!
     const { data: stories, error } = await supabase
       .from("tracked_stories")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", session.user.id) // This works now!
       .is("deleted_at", null);
 
     if (error) console.error("Supabase Error:", error);
 
-    // Sync DB snake_case to our production camelCase types
     trackedStoriesCache = (stories || []).map((s: any) => ({
       storyId: s.story_id,
       title: s.title,
@@ -68,8 +97,8 @@ export async function initChapterDashboard(): Promise<void> {
       lastUpdated: s.last_updated,
     }));
 
-    renderChapterDashboard(dashboardContainer, trackedStoriesCache);
-  }
+    renderChapterDashboard(dashboardContainer!, trackedStoriesCache);
+  });
 }
 
 /* ---------------------------------------------

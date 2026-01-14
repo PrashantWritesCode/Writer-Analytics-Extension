@@ -19732,64 +19732,81 @@ var supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// src/auth/authService.ts
-var authService = {
-  /**
-   * 1. REQUEST OTP
-   * Sends a 6-digit code to the user's email.
-   */
-  async sendOTP(email) {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // This ensures the user is created in your DB if they don't exist
-        shouldCreateUser: true
+// src/chapter-analytics/analytics/deriveMetrics.ts
+function calculateRetention(chapters) {
+  if (chapters.length < 2)
+    return { value: 100, status: "Good" };
+  const firstReads = chapters[0].statHistory?.slice(-1)[0]?.reads || 0;
+  const lastReads = chapters[chapters.length - 1].statHistory?.slice(-1)[0]?.reads || 0;
+  if (firstReads === 0)
+    return { value: 0, status: "Needs Attention" };
+  const retention = Math.round(lastReads / firstReads * 100);
+  const status = retention < 40 ? "Needs Attention" : "Good";
+  return { value: retention, status };
+}
+function findBiggestDropOff(chapters) {
+  let maxDropPercent = 0;
+  let problematicChapter = "N/A";
+  for (let i = 1; i < chapters.length; i++) {
+    const prevReads = chapters[i - 1].statHistory?.slice(-1)[0]?.reads || 0;
+    const currReads = chapters[i].statHistory?.slice(-1)[0]?.reads || 0;
+    if (prevReads > 0) {
+      const drop = (prevReads - currReads) / prevReads;
+      if (drop > maxDropPercent) {
+        maxDropPercent = drop;
+        problematicChapter = chapters[i].chapterTitle || `Chapter ${i + 1}`;
       }
-    });
-    if (error)
-      throw error;
-    return true;
-  },
-  /**
-   * 2. VERIFY OTP
-   * Validates the 6-digit code and starts the session.
-   */
-  async verifyOTP(email, token) {
-    const { data: { session }, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: "email"
-    });
-    if (error)
-      throw error;
-    if (session?.user) {
-      await this.syncUserLimit(session.user.id);
     }
-    return session;
-  },
-  /**
-   * 3. SYNC LIMITS
-   * Fetches the 2-story limit from Supabase and saves it locally.
-   */
-  async syncUserLimit(userId) {
-    const { data, error } = await supabase.from("subscriptions").select("plan, story_limit").eq("user_id", userId).single();
-    if (data) {
-      await chrome.storage.local.set({
-        userTier: {
-          plan: data.plan,
-          storyLimit: data.story_limit
-        }
-      });
-    }
-  },
-  /**
-   * 4. LOGOUT
-   */
-  async logout() {
-    await supabase.auth.signOut();
-    await chrome.storage.local.remove(["wa_auth_session", "userTier"]);
   }
-};
+  return {
+    chapterLabel: problematicChapter,
+    dropValue: Math.round(maxDropPercent * 100)
+  };
+}
+function findStrongestChapter(chapters) {
+  let bestRatio = 0;
+  let bestChapter = chapters[0]?.chapterTitle || "Chapter 1";
+  chapters.forEach((c) => {
+    const latest = c.statHistory?.slice(-1)[0];
+    if (latest && latest.reads && latest.reads > 0) {
+      const ratio = ((latest.votes || 0) + (latest.comments || 0)) / latest.reads;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        bestChapter = c.chapterTitle;
+      }
+    }
+  });
+  return { title: bestChapter };
+}
+function findFatigueStart(chapters) {
+  const firstReads = chapters[0].statHistory?.slice(-1)[0]?.reads || 0;
+  if (!firstReads)
+    return "N/A";
+  const fatigueChapter = chapters.find((c) => {
+    const reads = c.statHistory?.slice(-1)[0]?.reads || 0;
+    return reads / firstReads < 0.3;
+  });
+  return fatigueChapter ? fatigueChapter.chapterTitle : "None detected";
+}
+
+// src/chapter-analytics/analytics/storyInsights.ts
+function getStoryDiagnosis(chapters) {
+  const dropOff = findBiggestDropOff(chapters);
+  let primaryAlert = `\u26A0\uFE0F Your story loses readers sharply at ${dropOff.chapterLabel}.`;
+  let tags = ["Pacing slows", "Long exposition", "POV shift"];
+  const recoveryPoint = chapters.find((c, i) => {
+    if (i === 0)
+      return false;
+    const curr = c.statHistory?.slice(-1)[0]?.reads || 0;
+    const prev = chapters[i - 1].statHistory?.slice(-1)[0]?.reads || 0;
+    return curr > prev;
+  });
+  return {
+    primaryAlert,
+    tags,
+    recoveryChapter: recoveryPoint?.chapterTitle || null
+  };
+}
 
 // src/auth/authUI.ts
 async function renderLoginScreen(container, onLoginSuccess) {
@@ -19889,81 +19906,82 @@ async function renderLoginScreen(container, onLoginSuccess) {
   renderUI(!!pendingEmail, pendingEmail || "");
 }
 
-// src/chapter-analytics/analytics/deriveMetrics.ts
-function calculateRetention(chapters) {
-  if (chapters.length < 2)
-    return { value: 100, status: "Good" };
-  const firstReads = chapters[0].statHistory?.slice(-1)[0]?.reads || 0;
-  const lastReads = chapters[chapters.length - 1].statHistory?.slice(-1)[0]?.reads || 0;
-  if (firstReads === 0)
-    return { value: 0, status: "Needs Attention" };
-  const retention = Math.round(lastReads / firstReads * 100);
-  const status = retention < 40 ? "Needs Attention" : "Good";
-  return { value: retention, status };
-}
-function findBiggestDropOff(chapters) {
-  let maxDropPercent = 0;
-  let problematicChapter = "N/A";
-  for (let i = 1; i < chapters.length; i++) {
-    const prevReads = chapters[i - 1].statHistory?.slice(-1)[0]?.reads || 0;
-    const currReads = chapters[i].statHistory?.slice(-1)[0]?.reads || 0;
-    if (prevReads > 0) {
-      const drop = (prevReads - currReads) / prevReads;
-      if (drop > maxDropPercent) {
-        maxDropPercent = drop;
-        problematicChapter = chapters[i].chapterTitle || `Chapter ${i + 1}`;
+// src/auth/authService.ts
+var authService = {
+  /**
+   * 1. REQUEST OTP
+   * Sends a 6-digit code to the user's email.
+   */
+  async sendOTP(email) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        // This ensures the user is created in your DB if they don't exist
+        shouldCreateUser: true
       }
+    });
+    if (error)
+      throw error;
+    return true;
+  },
+  /**
+   * 2. VERIFY OTP
+   * Validates the 6-digit code and starts the session.
+   */
+  async verifyOTP(email, token) {
+    const { data: { session }, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: "email"
+    });
+    if (error)
+      throw error;
+    if (session?.user) {
+      await this.syncUserLimit(session.user.id);
+    }
+    return session;
+  },
+  /**
+   * 3. SYNC LIMITS
+   * Fetches the 2-story limit from Supabase and saves it locally.
+   */
+  async syncUserLimit(userId) {
+    const { data, error } = await supabase.from("subscriptions").select("plan, story_limit").eq("user_id", userId).single();
+    if (data) {
+      await chrome.storage.local.set({
+        userTier: {
+          plan: data.plan,
+          storyLimit: data.story_limit
+        }
+      });
+    }
+  },
+  /**
+   * 4. LOGOUT
+   */
+  async logout() {
+    await supabase.auth.signOut();
+    await chrome.storage.local.remove(["wa_auth_session", "userTier"]);
+  },
+  /**
+   * CENTRALIZED AUTH CHECK
+   * Checks if session is valid. If expired, shows login screen.
+   * If valid, executes the feature logic.
+   */
+  async ensureAuth(container, runFeature) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const nowInSeconds = Math.floor(Date.now() / 1e3);
+    if (session && session.expires_at && session.expires_at > nowInSeconds) {
+      runFeature(session);
+    } else {
+      console.warn("Session expired based on timestamp. Redirecting to login.");
+      await this.logout();
+      renderLoginScreen(container, () => {
+        this.ensureAuth(container, runFeature);
+      });
     }
   }
-  return {
-    chapterLabel: problematicChapter,
-    dropValue: Math.round(maxDropPercent * 100)
-  };
-}
-function findStrongestChapter(chapters) {
-  let bestRatio = 0;
-  let bestChapter = chapters[0]?.chapterTitle || "Chapter 1";
-  chapters.forEach((c) => {
-    const latest = c.statHistory?.slice(-1)[0];
-    if (latest && latest.reads && latest.reads > 0) {
-      const ratio = ((latest.votes || 0) + (latest.comments || 0)) / latest.reads;
-      if (ratio > bestRatio) {
-        bestRatio = ratio;
-        bestChapter = c.chapterTitle;
-      }
-    }
-  });
-  return { title: bestChapter };
-}
-function findFatigueStart(chapters) {
-  const firstReads = chapters[0].statHistory?.slice(-1)[0]?.reads || 0;
-  if (!firstReads)
-    return "N/A";
-  const fatigueChapter = chapters.find((c) => {
-    const reads = c.statHistory?.slice(-1)[0]?.reads || 0;
-    return reads / firstReads < 0.3;
-  });
-  return fatigueChapter ? fatigueChapter.chapterTitle : "None detected";
-}
-
-// src/chapter-analytics/analytics/storyInsights.ts
-function getStoryDiagnosis(chapters) {
-  const dropOff = findBiggestDropOff(chapters);
-  let primaryAlert = `\u26A0\uFE0F Your story loses readers sharply at ${dropOff.chapterLabel}.`;
-  let tags = ["Pacing slows", "Long exposition", "POV shift"];
-  const recoveryPoint = chapters.find((c, i) => {
-    if (i === 0)
-      return false;
-    const curr = c.statHistory?.slice(-1)[0]?.reads || 0;
-    const prev = chapters[i - 1].statHistory?.slice(-1)[0]?.reads || 0;
-    return curr > prev;
-  });
-  return {
-    primaryAlert,
-    tags,
-    recoveryChapter: recoveryPoint?.chapterTitle || null
-  };
-}
+};
 
 // src/chapter-analytics/popup/dashboard.ts
 var FREE_TRACKING_LIMIT = 2;
@@ -19973,14 +19991,7 @@ async function initChapterDashboard() {
   dashboardContainer = document.getElementById("chapter-dashboard");
   if (!dashboardContainer)
     return;
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-  if (!session) {
-    renderLoginScreen(dashboardContainer, () => {
-      initChapterDashboard();
-    });
-  } else {
+  await authService.ensureAuth(dashboardContainer, async (session) => {
     const { data: stories, error } = await supabase.from("tracked_stories").select("*").eq("user_id", session.user.id).is("deleted_at", null);
     if (error)
       console.error("Supabase Error:", error);
@@ -19991,7 +20002,7 @@ async function initChapterDashboard() {
       lastUpdated: s.last_updated
     }));
     renderChapterDashboard(dashboardContainer, trackedStoriesCache);
-  }
+  });
 }
 function renderChapterDashboard(container, stories = []) {
   if (!container)

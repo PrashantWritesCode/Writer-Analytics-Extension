@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { renderLoginScreen } from './authUI';
 
 export const authService = {
   /**
@@ -64,5 +65,33 @@ export const authService = {
   async logout() {
     await supabase.auth.signOut();
     await chrome.storage.local.remove(['wa_auth_session', 'userTier']);
+  },
+
+  /**
+   * CENTRALIZED AUTH CHECK
+   * Checks if session is valid. If expired, shows login screen.
+   * If valid, executes the feature logic.
+   */
+async ensureAuth(container: HTMLElement, runFeature: (session: any) => void) {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // 1. Get current time in seconds
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+
+    // 2. Validate session and expiry timestamp
+    if (session && session.expires_at && session.expires_at > nowInSeconds) {
+      // Token is valid and NOT expired
+      runFeature(session);
+    } else {
+      // Token is missing or expired (session.expires_at <= nowInSeconds)
+      console.warn("Session expired based on timestamp. Redirecting to login.");
+      
+      // Clean up local state if necessary
+      await this.logout(); 
+
+      renderLoginScreen(container, () => {
+        this.ensureAuth(container, runFeature);
+      });
+    }
   }
 };
