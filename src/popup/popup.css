@@ -638,3 +638,29 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Badge Base Styles */
+.badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  vertical-align: middle;
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+
+/* Optimized Early Access Badge */
+.early-access {
+  background-color: rgba(37, 99, 235, 0.1); /* Very soft blue tint */
+  color: #2563eb;                           /* Clear, high-contrast blue */
+  border: 1px solid rgba(37, 99, 235, 0.2); /* Subtle border */
+  font-weight: 600;                         /* Matches the 'Coming Soon' weight */
+  letter-spacing: 0.02em;                   /* Improves readability for all-caps */
+}
+
+/* Keep your existing Coming Soon style for comparison */
+.coming-soon {
+  background-color: #f1f5f9;
+  color: #64748b;
+}

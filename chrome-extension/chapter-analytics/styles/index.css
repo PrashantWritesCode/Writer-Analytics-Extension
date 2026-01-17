@@ -1,0 +1,203 @@
+/* =====================================================
+   Chapter Analytics — Shared Styles (Design System v1)
+   ===================================================== */
+
+#chapter-dashboard,
+#chapter-analytics {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  width: 100%;
+  height: 100%;
+  /* padding: 28px 26px; */
+  box-sizing: border-box;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#chapter-dashboard::-webkit-scrollbar,
+#chapter-analytics::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chapter-dashboard::-webkit-scrollbar-thumb,
+#chapter-analytics::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 999px;
+}
+
+.chapter-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 6px 0 2px;
+}
+
+.chapter-section-title::before {
+  content: "✦";
+  font-size: 12px;
+  color: var(--accent-gradient-b);
+}
+
+.chapter-btn,
+.chapter-refresh-btn {
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.chapter-btn:focus-visible,
+.chapter-refresh-btn:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline-offset: 2px;
+}
+
+.chapter-refresh-btn {
+  background: linear-gradient(135deg, var(--accent-gradient-a), var(--accent-gradient-b));
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.chapter-refresh-btn:hover {
+  filter: brightness(1.05);
+}
+
+.chapter-empty,
+.chapter-empty-state {
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, #f8fbff, #ffffff);
+  border: 1px solid rgba(15, 118, 110, 0.08);
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+
+.chapter-empty p,
+.chapter-empty-state p {
+  margin: 0;
+}
+
+.chapter-empty__subtitle,
+.chapter-empty-subtext {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chapter-empty-emoji {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.chapter-empty-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  margin: 0;
+}
+
+.chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.chapter-card,
+.chapter-story-card {
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, #fefefe, #f7faff);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(15, 118, 110, 0.08);
+}
+
+.chapter-card:hover,
+.chapter-story-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.chapter-card-title,
+.chapter-story-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.chapter-card-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chapter-card-stats span strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chapter-card-dropoff {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chapter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(38, 166, 154, 0.12);
+  color: var(--accent);
+}
+
+.chapter-summary {
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.12));
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+}
+
+.chapter-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.chapter-summary-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chapter-summary-list li strong {
+  color: var(--text);
+  font-weight: 600;
+}

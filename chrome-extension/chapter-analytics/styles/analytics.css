@@ -1,0 +1,71 @@
+/* =====================================================
+   Chapter Analytics — Detail View
+   ===================================================== */
+
+.chapter-analytics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.chapter-analytics-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.chapter-analytics-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.chapter-analytics-header .chapter-refresh-btn {
+  flex-shrink: 0;
+}
+
+.chapter-grid {
+  margin-top: 14px;
+}
+
+.chapter-card-title {
+  font-size: 14px;
+}
+
+.chapter-card-stats span {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.chapter-card-stats span strong {
+  font-size: 15px;
+}
+
+.chapter-card-dropoff {
+  font-size: 12px;
+  color: rgba(15, 118, 110, 0.9);
+}
+
+.chapter-summary {
+  margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+  .chapter-analytics-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chapter-analytics-header .chapter-refresh-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .chapter-card-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
