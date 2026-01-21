@@ -20055,6 +20055,62 @@ function renderChapterDashboard(container, stories = []) {
           </div>
         `}
       </section>
+
+      <div class="onboarding-container">
+        <details class="how-to-accordion">
+          <summary>
+            \u2728 How to Use Chapter Analytics (Beta)
+            <span class="chevron">\u25BC</span>
+          </summary>
+          <div class="instruction-list">
+            <div class="step">
+              <span class="number">1</span>
+              <div>
+                <strong>Open your story on Wattpad</strong>
+                <p>Go to your story\u2019s main page where you can see the Table of Contents.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">2</span>
+              <div>
+                <strong>Click \u201CTrack Story\u201D</strong>
+                <p>While on the story page, click Track Story. Your story will now appear in the list below.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">3</span>
+              <div>
+                <strong>Update your story stats</strong>
+                <p>Click Update to collect chapter data. Stay on Wattpad\u2014background tabs will briefly open to gather stats.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">4</span>
+              <div>
+                <strong>Update regularly for better insights</strong>
+                <p>Update 3\u20134 times per week to see clearer trends and reader behavior.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">5</span>
+              <div>
+                <strong>View chapter insights</strong>
+                <p>Once updated, click View Insights to explore drop-offs and engagement peaks.</p>
+              </div>
+            </div>
+            <div class="step pro-step">
+              <span class="number">6</span>
+              <div class="step-content">
+                <strong>Need more than 2 stories?</strong>
+                <p>
+                  Unlimited story tracking and advanced historical comparisons will be available soon in our upcoming 
+                  <span class="pro-highlight">Pro Tier</span>. Stay tuned!
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </div>
   `;
   attachListEventListeners(container);
@@ -20256,7 +20312,9 @@ async function handleTrackStoryClick() {
   });
 }
 async function getSupabaseSnapshots(storyId) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
   if (!session)
     return null;
   const { data: chapters, error: chError } = await supabase.from("story_chapters").select("chapter_id, title, sequence_order").eq("story_id", storyId).order("sequence_order", { ascending: true });

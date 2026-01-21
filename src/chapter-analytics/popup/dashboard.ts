@@ -79,8 +79,7 @@ export async function initChapterDashboard(): Promise<void> {
 
   // 1. You call the centralized function
   // 2. You MUST put (session) here to "catch" the data from the service
-  await authService.ensureAuth(dashboardContainer, async (session:any) => {
-    
+  await authService.ensureAuth(dashboardContainer, async (session: any) => {
     // Now 'session' is defined and the error goes away!
     const { data: stories, error } = await supabase
       .from("tracked_stories")
@@ -106,7 +105,7 @@ export async function initChapterDashboard(): Promise<void> {
 --------------------------------------------- */
 export function renderChapterDashboard(
   container: HTMLElement,
-  stories: TrackedStory[] = []
+  stories: TrackedStory[] = [],
 ): void {
   if (!container) return;
 
@@ -153,7 +152,7 @@ export function renderChapterDashboard(
               </button>
             </div>
           </article>
-        `
+        `,
                 )
                 .join("")
             : `
@@ -164,6 +163,62 @@ export function renderChapterDashboard(
         `
         }
       </section>
+
+      <div class="onboarding-container">
+        <details class="how-to-accordion">
+          <summary>
+            ✨ How to Use Chapter Analytics (Beta)
+            <span class="chevron">▼</span>
+          </summary>
+          <div class="instruction-list">
+            <div class="step">
+              <span class="number">1</span>
+              <div>
+                <strong>Open your story on Wattpad</strong>
+                <p>Go to your story’s main page where you can see the Table of Contents.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">2</span>
+              <div>
+                <strong>Click “Track Story”</strong>
+                <p>While on the story page, click Track Story. Your story will now appear in the list below.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">3</span>
+              <div>
+                <strong>Update your story stats</strong>
+                <p>Click Update to collect chapter data. Stay on Wattpad—background tabs will briefly open to gather stats.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">4</span>
+              <div>
+                <strong>Update regularly for better insights</strong>
+                <p>Update 3–4 times per week to see clearer trends and reader behavior.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="number">5</span>
+              <div>
+                <strong>View chapter insights</strong>
+                <p>Once updated, click View Insights to explore drop-offs and engagement peaks.</p>
+              </div>
+            </div>
+            <div class="step pro-step">
+              <span class="number">6</span>
+              <div class="step-content">
+                <strong>Need more than 2 stories?</strong>
+                <p>
+                  Unlimited story tracking and advanced historical comparisons will be available soon in our upcoming 
+                  <span class="pro-highlight">Pro Tier</span>. Stay tuned!
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </div>
   `;
 
@@ -175,7 +230,7 @@ export function renderChapterDashboard(
 --------------------------------------------- */
 function attachListEventListeners(container: HTMLElement) {
   const trackBtn = container.querySelector(
-    "#chapter-track-story-btn"
+    "#chapter-track-story-btn",
   ) as HTMLButtonElement;
   if (trackBtn) trackBtn.onclick = () => handleTrackStoryClick();
 
@@ -222,7 +277,7 @@ function attachListEventListeners(container: HTMLElement) {
 export function renderStoryDashboard(
   container: HTMLElement,
   story: TrackedStory,
-  chapters: any[]
+  chapters: any[],
 ): void {
   const retention = calculateRetention(chapters);
   const dropOff = findBiggestDropOff(chapters);
@@ -242,8 +297,8 @@ export function renderStoryDashboard(
               } <span class="verified-check">✓</span></h2>
               <p class="chapter-story-meta-display">
                 ${story.totalChapters} chapters • Updated ${new Date(
-    story.lastUpdated
-  ).toLocaleDateString()}
+                  story.lastUpdated,
+                ).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -349,7 +404,7 @@ export async function handleTrackStoryClick(): Promise<void> {
 
   if (count !== null && count >= FREE_TRACKING_LIMIT) {
     alert(
-      "Chapter Analytics (Beta): Free plan includes tracking up to 2 stories. Upgrade to unlock unlimited tracking."
+      "Chapter Analytics (Beta): Free plan includes tracking up to 2 stories. Upgrade to unlock unlimited tracking.",
     );
     return;
   }
@@ -370,7 +425,7 @@ export async function handleTrackStoryClick(): Promise<void> {
         const tocRoot = document.querySelector('div[data-testid="toc"]');
         if (!tocRoot) return null;
         const anchors = Array.from(
-          tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a')
+          tocRoot.querySelectorAll('ul[aria-label="story-parts"] li a'),
         );
         const chapters = anchors.map((a: any, i: number) => ({
           chapterId:
@@ -399,7 +454,7 @@ export async function handleTrackStoryClick(): Promise<void> {
         last_updated: new Date().toISOString(),
         deleted_at: null, // 🔥 Important: This "undeletes" the story if it was previously removed
       },
-      { onConflict: "user_id, story_id" } // 🔥 Tell the DB to look for this pair
+      { onConflict: "user_id, story_id" }, // 🔥 Tell the DB to look for this pair
     );
 
     if (storyError) {
@@ -431,20 +486,21 @@ export async function handleTrackStoryClick(): Promise<void> {
   });
 }
 
-
 /* ---------------------------------------------
    6. DATABASE HELPERS (FIXED FOR NESTED HISTORY)
 --------------------------------------------- */
 async function getSupabaseSnapshots(storyId: string) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) return null;
 
   // 1. Get the SKELETON (Structure)
   const { data: chapters, error: chError } = await supabase
-    .from('story_chapters')
-    .select('chapter_id, title, sequence_order')
-    .eq('story_id', storyId)
-    .order('sequence_order', { ascending: true }); // Sorts 1, 2, 3...
+    .from("story_chapters")
+    .select("chapter_id, title, sequence_order")
+    .eq("story_id", storyId)
+    .order("sequence_order", { ascending: true }); // Sorts 1, 2, 3...
 
   if (chError || !chapters) {
     console.error("Error fetching chapters:", chError);
@@ -453,10 +509,10 @@ async function getSupabaseSnapshots(storyId: string) {
 
   // 2. Get the RAW HISTORY (Muscle)
   const { data: snapshots, error: snapError } = await supabase
-    .from('chapter_snapshots')
-    .select('*')
-    .eq('story_id', storyId)
-    .order('captured_at', { ascending: true }); // Oldest -> Newest (Important for .slice(-1))
+    .from("chapter_snapshots")
+    .select("*")
+    .eq("story_id", storyId)
+    .order("captured_at", { ascending: true }); // Oldest -> Newest (Important for .slice(-1))
 
   if (snapError) {
     console.error("Error fetching snapshots:", snapError);
@@ -464,23 +520,24 @@ async function getSupabaseSnapshots(storyId: string) {
   }
 
   // 3. THE TRANSFORM: Nest snapshots inside chapters
-  return chapters.map(ch => {
+  return chapters.map((ch) => {
     // specific history for this chapter
-    const myHistory = snapshots?.filter(s => s.chapter_id === ch.chapter_id) || [];
-    
+    const myHistory =
+      snapshots?.filter((s) => s.chapter_id === ch.chapter_id) || [];
+
     // Return the Shape 'deriveMetrics.ts' expects:
     return {
       chapterId: ch.chapter_id,
       chapterTitle: ch.title, // Maps to 'c.chapterTitle' usage
       sequence: ch.sequence_order,
-      
+
       // The Critical Part: 'statHistory'
-      statHistory: myHistory.map(h => ({
+      statHistory: myHistory.map((h) => ({
         reads: h.reads,
         votes: h.votes,
         comments: h.comments,
-        capturedAt: h.captured_at
-      }))
+        capturedAt: h.captured_at,
+      })),
     };
   });
 }
